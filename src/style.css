@@ -4,8 +4,8 @@ html {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: responsive 16px 18px;
   font-range: 420px 1280px;
-  /* color: var(--text-color);
-  background-color: var(--background-color); */
+  color: #222222;
+  background-color: #fafafa;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -63,7 +63,12 @@ ul.list li {
 
 ul.list li div {
   display: flex; 
-  justify-content: space-around;
+  justify-content: space-between;
+}
+
+div.new-item-form {
+  display: flex; 
+  justify-content: space-between;
 }
 
 
@@ -74,7 +79,7 @@ a {
 }
 
 a:hover {
-/*  color: var(--accent-color); */
+  /*  color: var(--accent-color); */
 }
 
 
@@ -103,7 +108,7 @@ input[type="url"],
 input[type="password"] {
   width: 70%;
   padding: 0.5rem 1rem;
-  background-color: rgba(255,255,255,0.1);
+  background-color: #ffffff;
   border-radius: 3rem;
   /*  &:hover {
   background-color: rgba(255,255,255,0.15);
@@ -131,56 +136,50 @@ svg {
 }
 
 ::selection {
-/*  background: var(--accent-color);
+  /*  background: var(--accent-color);
   color: var(--background-color); */
 }
 
 
+.card {
+  padding: 1rem;
+  background-color: #f0f0f0;
+  border-radius: 1rem;
+  display: flex;
+  min-height: 420px;
+}
 
 
+.card .left {
+  width: 50%;
+  padding: 1rem;
+  text-align: center;
+}
 
-/*------------------------------------*\
-Card layout
-\*------------------------------------*/
+.card .right {
+  width: 50%;
+}
 
+.card .right .info {
+  padding: 1rem;
+  margin: auto 0 0 0;
+  font-size: 0.67rem;
+  opacity: 0.67;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 768px) {
   .card {
-    padding: 1rem;
-    background-color: #DDDADC;
-    border-radius: 1rem;
-    display: flex;
-    align-items: center;
-    min-height: 420px;
-  }
-
-
-  .card .left {
-    width: 50%;
-    padding: 1rem;
-    text-align: center;
-  }
-
-  .card .right {
-    width: 50%;
-  }
-
-  card .right .info {
-    padding: 1rem;
-    margin: auto 0 0 0;
-    font-size: 0.67rem;
-    opacity: 0.67;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  @media (max-width: 768px) {
     border-radius: 0;
     flex-direction: column;
-    .left,
-    .right {
+  }
+
+  .card .left, .card .right {
       width: 100%;
-    }
   }
-  iframe {
-    border:1px solid lightgrey;
-  }
+}
+iframe {
+  border:1px solid lightgrey;
+}
