@@ -1,0 +1,30 @@
+{
+  "short_name": "Voteo",
+  "name": "Voteo",
+  "description": "Video voting app",
+  "display": "fullscreen",
+  "scope": "/voteo/",
+  "start_url": "/voteo/",
+  "theme_color": "#06D19C",
+  "background_color": "#323232",
+  "orientation": "portrait",
+  "dir": "ltr",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "./assets/icon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
