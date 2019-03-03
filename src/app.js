@@ -11,15 +11,15 @@ let state = {
 const items = (id) => {
   return state.items.sort((a, b) => b.votes - a.votes ).map( i => `
     <li >
-      <div>
-        <div onclick="setSelectedItem('${i.id}')">
-          ${i.title} (${i.votes} votes)
-        </div>
-        <div>
-          <img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${i.id}')" />
-          <img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${i.id}')" />
-        </div>
-      </div>
+    <div>
+    <div onclick="setSelectedItem('${i.id}')">
+    ${i.title} (${i.votes} votes)
+    </div>
+    <div>
+    <img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${i.id}')" />
+    <img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${i.id}')" />
+    </div>
+    </div>
     </li>` ).join('');
 };
 
@@ -55,19 +55,19 @@ const downvote = (i) => {
 
 const getVideos = () => {
   fetch(`/videos`, { 
-      method: 'get',
-      cache: "no-cache",
-    })
-  .then(function(response) {
-    console.log(response);
-    return response.json();
+    method: 'get',
+    cache: "no-cache",
   })
-  .then(function(json) {
-    console.log(json);
-    state.items = json;
-    //push({id: id, title: json.title});
-    reflop();
-  });
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(json);
+      state.items = json;
+      //push({id: id, title: json.title});
+      reflop();
+    });
 }
 
 const cleanInput = (input) => {
@@ -80,24 +80,24 @@ const cleanInput = (input) => {
 
 const putVideos = () => {
   fetch(`/videos`, { 
-      method: 'PUT',
-      cache: "no-cache",
-      headers: {
-          "Content-Type": "application/json",
-      },
-      redirect: "follow", // manual, *follow, error
-      referrer: "no-referrer", // no-referrer, *client
-      body: JSON.stringify(state.items), // body data type must match "Content-Type" header
-    })
-  .then(function(response) {
-    console.log(response);
-    return response.json();
+    method: 'PUT',
+    cache: "no-cache",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    redirect: "follow", // manual, *follow, error
+    referrer: "no-referrer", // no-referrer, *client
+    body: JSON.stringify(state.items), // body data type must match "Content-Type" header
   })
-  .then(function(json) {
-    console.log(json);
-    state.items = json;
-    reflop();
-  });
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(json);
+      state.items = json;
+      reflop();
+    });
 };
 
 const preview = () => {
@@ -109,25 +109,25 @@ const preview = () => {
 
 const add = () => {
   const id = cleanInput(document.getElementById('addbox').value);
-  
+
   fetch(`/yt/data?id=${id}`, { 
-      method: 'get',
-    })
-  .then(function(response) {
-    console.log(response);
-    return response.json();
+    method: 'get',
   })
-  .then(function(json) {
-    console.log(JSON.stringify(json));
-    console.log(json.title);
-    let title = json.title;
-    if (title.length > 30) {
-      title = title.substring(0, 30) + " ..."; 
-    }
-    state.items.push({id: id, title: title});
-    state.selectedItem = id;
-    putVideos();
-  });
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(JSON.stringify(json));
+      console.log(json.title);
+      let title = json.title;
+      if (title.length > 30) {
+        title = title.substring(0, 30) + " ..."; 
+      }
+      state.items.push({id: id, title: title});
+      state.selectedItem = id;
+      putVideos();
+    });
 };
 
 // The router code. Takes a URL, checks against the list of supported routes and then renders the corresponding content page.
