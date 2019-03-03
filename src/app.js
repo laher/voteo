@@ -1,6 +1,7 @@
 "use strict";
 
 let state = {
+  userId: null,
   items: [
     { id: "X7hFERntlog", title: "Fearless Org", votes: 0 }, 
     { id: "d_HHnEROy_w", title: "Stop managing", votes: -10 }, 
@@ -11,15 +12,15 @@ let state = {
 const items = (id) => {
   return state.items.sort((a, b) => b.votes - a.votes ).map( i => `
     <li >
-      <div>
-        <div onclick="setSelectedItem('${i.id}')">
-          ${i.title} (${i.votes} votes)
-        </div>
-        <div>
-          <img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${i.id}')" />
-          <img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${i.id}')" />
-        </div>
-      </div>
+    <div>
+    <div onclick="setSelectedItem('${i.id}')">
+    ${i.title} (${i.votes} votes)
+    </div>
+    <div>
+    <img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${i.id}')" />
+    <img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${i.id}')" />
+    </div>
+    </div>
     </li>` ).join('');
 };
 
@@ -55,19 +56,19 @@ const downvote = (i) => {
 
 const getVideos = () => {
   fetch(`/videos`, { 
-      method: 'get',
-      cache: "no-cache",
-    })
-  .then(function(response) {
-    console.log(response);
-    return response.json();
+    method: 'get',
+    cache: "no-cache",
   })
-  .then(function(json) {
-    console.log(json);
-    state.items = json;
-    //push({id: id, title: json.title});
-    reflop();
-  });
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(json);
+      state.items = json;
+      //push({id: id, title: json.title});
+      reflop();
+    });
 }
 
 const cleanInput = (input) => {
@@ -80,24 +81,24 @@ const cleanInput = (input) => {
 
 const putVideos = () => {
   fetch(`/videos`, { 
-      method: 'PUT',
-      cache: "no-cache",
-      headers: {
-          "Content-Type": "application/json",
-      },
-      redirect: "follow", // manual, *follow, error
-      referrer: "no-referrer", // no-referrer, *client
-      body: JSON.stringify(state.items), // body data type must match "Content-Type" header
-    })
-  .then(function(response) {
-    console.log(response);
-    return response.json();
+    method: 'PUT',
+    cache: "no-cache",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    redirect: "follow", // manual, *follow, error
+    referrer: "no-referrer", // no-referrer, *client
+    body: JSON.stringify(state.items), // body data type must match "Content-Type" header
   })
-  .then(function(json) {
-    console.log(json);
-    state.items = json;
-    reflop();
-  });
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(json);
+      state.items = json;
+      reflop();
+    });
 };
 
 const preview = () => {
@@ -109,29 +110,30 @@ const preview = () => {
 
 const add = () => {
   const id = cleanInput(document.getElementById('addbox').value);
-  
+
   fetch(`/yt/data?id=${id}`, { 
-      method: 'get',
-    })
-  .then(function(response) {
-    console.log(response);
-    return response.json();
+    method: 'get',
   })
-  .then(function(json) {
-    console.log(JSON.stringify(json));
-    console.log(json.title);
-    let title = json.title;
-    if (title.length > 30) {
-      title = title.substring(0, 30) + " ..."; 
-    }
-    state.items.push({id: id, title: title});
-    state.selectedItem = id;
-    putVideos();
-  });
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(JSON.stringify(json));
+      console.log(json.title);
+      let title = json.title;
+      if (title.length > 30) {
+        title = title.substring(0, 30) + " ..."; 
+      }
+      state.items.push({id: id, title: title});
+      state.selectedItem = id;
+      putVideos();
+    });
 };
 
 // The router code. Takes a URL, checks against the list of supported routes and then renders the corresponding content page.
 const reflop = async () => {
+  document.getElementById('app-container').style.display = 'block';
   const vidList = document.getElementById('videoList');
   if (vidList) {
     vidList.innerHTML = items();
@@ -139,5 +141,61 @@ const reflop = async () => {
   show(state.selectedItem);
 }
 
+const showSignOut = () => {
+  document.getElementById('sign-out').style.display = 'block';
+  document.getElementById('app-container').style.display = 'block';
+}
+
+const showSignIn = () => {
+  document.getElementById('sign-out').style.display = 'none';
+  document.getElementById('app-container').style.display = 'none';
+  signIn.renderEl({ el: '#widget-container' }, (res) => {
+    if (res.status === 'SUCCESS') {
+      signIn.tokenManager.add('id_token', res[0]);
+      signIn.tokenManager.add('access_token', res[1]);
+      console.log(signIn.tokenManager);
+      getVideos();
+    }
+  });
+}
+
+let signIn = null;
+const start = () => {
+  document.getElementById('sign-out').addEventListener('click', (event) => {
+    event.preventDefault();
+    signIn.session.close((err) => {
+      if (err) {
+        return alert(`Error: ${err}`)
+      }
+      showSignIn()
+    })
+  });
+  signIn = new OktaSignIn({
+    baseUrl: 'https://dev-343286.okta.com',
+    clientId: '0oabsbm6ga3Sy1tIf356',
+    redirectUri: window.location.origin,
+    authParams: {
+      issuer: 'default',
+      responseType: ['id_token','token']
+    }
+  });
+  init();
+}
+
+const init = () => {
+  signIn.session.get(async (res) => {
+      if (res.status === 'ACTIVE') {
+        getVideos();
+        console.log('already active');
+        console.log(signIn.tokenManager);
+        showSignOut();
+      } else {
+        console.log('not signed in');
+        showSignIn();
+      }
+    })
+
+}
+
 // Listen on page load:
-window.addEventListener('load', getVideos);
+window.addEventListener('load', start);
