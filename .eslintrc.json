@@ -1,0 +1,50 @@
+{
+  "extends": [
+    "airbnb",
+    "prettier"
+  ],
+  "env": {
+    "browser": true,
+    "jest": true
+  },
+  "plugins": [],
+  "parser": "babel-eslint",
+  "rules": {
+    "comma-dangle": ["error", { "arrays": "always-multiline", "objects": "always-multiline", "imports": "always-multiline", "exports": "always-multiline", "functions": "ignore" }],
+    "function-paren-newline": "off",
+    "global-require": "off",
+    "import/extensions": "off",
+    "import/no-dynamic-require": "off",
+    "import/no-extraneous-dependencies": ["error", {"devDependencies": true, "optionalDependencies": false, "peerDependencies": false}],
+    "import/prefer-default-export": "off",
+    "max-len": ["error", 120],
+    "no-confusing-arrow": "off",
+    "no-constant-condition": ["error", { "checkLoops": false }],
+    "no-duplicate-imports": "off",
+    "no-else-return": "off",
+    "no-underscore-dangle": "off",
+    "no-unused-vars": ["error", {"args": "none"}],
+    "object-curly-newline": "off",
+    "prefer-destructuring": "off",
+    "prefer-promise-reject-errors": "off",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ForInStatement",
+        "message": "for..in loops iterate over the entire prototype chain, which is virtually never what you want. Use Object.{keys,values,entries}, and iterate over the resulting array."
+      },
+      {
+        "selector": "LabeledStatement",
+        "message": "Labels are a form of GOTO; using them makes code confusing and hard to maintain and understand."
+      },
+      {
+        "selector": "WithStatement",
+        "message": "`with` is disallowed in strict mode because it makes code impossible to predict and optimize."
+      }
+    ]
+  },
+  "settings": {
+    "import/resolver": {
+    }
+  }
+}
