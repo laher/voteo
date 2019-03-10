@@ -11,17 +11,13 @@ let state = {
 };
 const items = (id) => {
   return state.items.sort((a, b) => b.votes - a.votes ).map( i => `
-    <li >
-    <div>
-    <div onclick="setSelectedItem('${i.id}')">
-    ${i.title} (${i.votes} votes)
-    </div>
+    <li><div>
+    <div onclick="setSelectedItem('${i.id}')">${i.title} (${i.votes} votes)</div>
     <div>
     <img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${i.id}')" />
     <img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${i.id}')" />
     </div>
-    </div>
-    </li>` ).join('');
+    </div></li>` ).join('');
 };
 
 const setSelectedItem = (i) => {
@@ -133,27 +129,32 @@ const add = () => {
 
 // The router code. Takes a URL, checks against the list of supported routes and then renders the corresponding content page.
 const reflop = async () => {
-  document.getElementById('app-container').style.display = 'block';
+  document.getElementById('logged-in').style.display = 'block';
   const vidList = document.getElementById('videoList');
   if (vidList) {
     vidList.innerHTML = items();
+    document.getElementById('videoCount').innerHTML = state.items.length;
   }
   show(state.selectedItem);
 }
 
 const showSignOut = () => {
-  document.getElementById('sign-out').style.display = 'block';
-  document.getElementById('app-container').style.display = 'block';
+  console.log("show signout");
+  signIn.hide();
+  document.getElementById('logged-in').style.display = 'block';
 }
 
 const showSignIn = () => {
-  document.getElementById('sign-out').style.display = 'none';
-  document.getElementById('app-container').style.display = 'none';
+  console.log("show signin");
+  document.getElementById('logged-in').style.display = 'none';
   signIn.renderEl({ el: '#widget-container' }, (res) => {
     if (res.status === 'SUCCESS') {
+      console.log("signin success", res);
       signIn.tokenManager.add('id_token', res[0]);
       signIn.tokenManager.add('access_token', res[1]);
-      console.log(signIn.tokenManager);
+      console.log("signin success. tokenManager:", signIn.tokenManager);
+      document.getElementById('name').innerHTML = res[0].claims.email;
+      showSignOut();
       getVideos();
     }
   });
@@ -163,9 +164,11 @@ let signIn = null;
 const start = () => {
   document.getElementById('sign-out').addEventListener('click', (event) => {
     event.preventDefault();
+
+    console.log("signout clicked");
     signIn.session.close((err) => {
       if (err) {
-        return alert(`Error: ${err}`)
+        alert(`Error: ${err}`)
       }
       showSignIn()
     })
@@ -173,7 +176,7 @@ const start = () => {
   signIn = new OktaSignIn({
     baseUrl: 'https://dev-343286.okta.com',
     clientId: '0oabsbm6ga3Sy1tIf356',
-    redirectUri: window.location.origin,
+    redirectUri: 'http://localhost:3000/auth/callback/login',
     authParams: {
       issuer: 'default',
       responseType: ['id_token','token']
@@ -186,8 +189,11 @@ const init = () => {
   signIn.session.get(async (res) => {
       if (res.status === 'ACTIVE') {
         getVideos();
-        console.log('already active');
-        console.log(signIn.tokenManager);
+        console.log('login already active', res);
+        document.getElementById('name').innerHTML = res.login;
+
+        console.log('tokenManager', signIn.tokenManager);
+
         showSignOut();
       } else {
         console.log('not signed in');
