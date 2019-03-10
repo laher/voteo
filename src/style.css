@@ -65,7 +65,7 @@ ul.logged-in {
  display: flex;
  text-align: center; 
  list-style: none;
- background: #cce5ff;
+ background: rgb(78, 195, 189);
  padding: 5px;
  justify-content: space-between; 
  border-radius: 0.5rem;
@@ -88,7 +88,7 @@ ul.logged-in li a {
 ul.list li { 
   padding-top: 10px;
   border-bottom: 1px solid gray;
-  width: 90%;
+  width: 96%;
 }
 
 ul.list li div {
@@ -185,7 +185,8 @@ svg {
 }
 
 .card > * {
- padding: 10px;
+ padding-right: 10px;
+ padding-left: 10px;
  flex: 1 100%;
 }
 
@@ -197,8 +198,6 @@ svg {
 
 .card .left {
   width: 50%;
-  padding: 1rem;
-  text-align: center;
 }
 
 .card .right {
