@@ -15,6 +15,8 @@ func main() {
 	http.Handle("/", fs)
 	http.HandleFunc("/videos", crudHandler)
 	http.HandleFunc("/yt/data", ytDataHandler)
+	http.HandleFunc("/auth/callback/login", loginCallbackHandler)
+	http.HandleFunc("/auth/callback/logout", logoutCallbackHandler)
 	loadVideos()
 	log.Println("Listening...")
 	http.ListenAndServe(":3000", nil)
@@ -122,4 +124,12 @@ func ytDataHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Printf("Error retrieving video metadata for %+v: %v", id, resp.Status)
 	}
+}
+
+func loginCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("login redirect ... %v", r.URL.Query())
+}
+
+func logoutCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("logout redirect ... %v", r.URL.Query())
 }

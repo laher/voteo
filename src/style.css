@@ -18,7 +18,6 @@ body {
 }
 
 .container {
-  min-height: calc(100vh - 3rem);
   padding: 5vh 0.5rem;
   width: 100%;
   max-width: 992px;
@@ -55,10 +54,41 @@ ul.list {
   list-style: none;
 }
 
+#logged-in-inner {
+  max-width: 992px;
+  width: 100%;
+  max-width: 992px;
+  margin: 0 auto;
+}
+
+ul.logged-in { 
+ display: flex;
+ text-align: center; 
+ list-style: none;
+ background: rgb(78, 195, 189);
+ padding: 5px;
+ justify-content: space-between; 
+ border-radius: 0.5rem;
+}
+ul.logged-in li { 
+  display: inline-block;
+  padding: 9px;
+  justify-content: space-between; 
+  border-radius: 0.5rem;
+  font-weight: bold;
+}
+
+ul.logged-in li.button {
+  background-color: #f0f0f0;
+}
+ul.logged-in li a {
+  text-decoration: none;
+}
+
 ul.list li { 
-  padding: 10px;
+  padding-top: 10px;
   border-bottom: 1px solid gray;
-  width: 95%;
+  width: 96%;
 }
 
 ul.list li div {
@@ -141,19 +171,33 @@ svg {
 }
 
 
+#name {
+ flex-grow: 0;
+}
+
 .card {
   padding: 1rem;
   background-color: #f0f0f0;
   border-radius: 1rem;
   display: flex;
   min-height: 420px;
+  /* This aligns items to the end line on main-axis */
 }
 
+.card > * {
+ padding-right: 10px;
+ padding-left: 10px;
+ flex: 1 100%;
+}
+
+.card .top {
+  text-align: center;
+  margin: auto;
+  width: 100%;
+}
 
 .card .left {
   width: 50%;
-  padding: 1rem;
-  text-align: center;
 }
 
 .card .right {
