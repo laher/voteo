@@ -7,17 +7,22 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
+
+	jwtverifier "github.com/okta/okta-jwt-verifier-golang"
 )
 
 func main() {
 	fs := http.FileServer(http.Dir("src"))
 	http.Handle("/", fs)
-	http.HandleFunc("/videos", crudHandler)
+	http.HandleFunc("/videos", videosHandler)
+	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/yt/data", ytDataHandler)
 	http.HandleFunc("/auth/callback/login", loginCallbackHandler)
 	http.HandleFunc("/auth/callback/logout", logoutCallbackHandler)
 	loadVideos()
+	loadVotes()
 	log.Println("Listening...")
 	http.ListenAndServe(":3000", nil)
 }
@@ -28,13 +33,23 @@ type video struct {
 	Votes int    `json:"votes"`
 }
 
+type vote struct {
+	VideoID  string `json:"videoId"`
+	PersonID string `json:"personId"`
+	Up       bool   `json:"up"`
+}
+
 var (
-	videos     = []video{}
-	initVideos = []video{
+	videos     = []*video{}
+	votes      = []*vote{}
+	initVideos = []*video{
 		{ID: "JntjzuI5rGM", Title: "Dave Grohl Tells ...", Votes: 0},
 		{ID: "X7hFERntlog", Title: "Fearless Organization", Votes: 0},
 		{ID: "d_HHnEROy_w", Title: "Stop managing, start ...", Votes: -1},
 		{ID: "BCkCvay4-DQ", Title: "Push Kick", Votes: 1},
+	}
+	initVotes = []*vote{
+		{VideoID: "BCkCvay4-DQ", PersonID: "am@voteo", Up: true},
 	}
 	lock = sync.RWMutex{}
 )
@@ -50,7 +65,7 @@ func loadVideos() {
 		}
 		log.Fatalf("couldnt read db: %v", err)
 	}
-	myVideos := []video{}
+	myVideos := []*video{}
 	err = json.Unmarshal(b, &myVideos)
 	if err != nil {
 		log.Fatalf("Couldnt decode db: %v", err)
@@ -58,6 +73,24 @@ func loadVideos() {
 	videos = myVideos
 }
 
+func loadVotes() {
+	lock.Lock()
+	defer lock.Unlock()
+	b, err := ioutil.ReadFile("votes.json")
+	if err != nil {
+		if os.IsNotExist(err) {
+			videos = initVideos
+			return
+		}
+		log.Fatalf("couldnt read db: %v", err)
+	}
+	myVotes := []*vote{}
+	err = json.Unmarshal(b, &myVotes)
+	if err != nil {
+		log.Fatalf("Couldnt decode db: %v", err)
+	}
+	votes = myVotes
+}
 func writeVideos() {
 	lock.Lock()
 	defer lock.Unlock()
@@ -68,13 +101,141 @@ func writeVideos() {
 	}
 }
 
-func crudHandler(w http.ResponseWriter, r *http.Request) {
-	//id := r.URL.Query().Get("id")
+func writeVotes() {
+	lock.Lock()
+	defer lock.Unlock()
+	b, _ := json.MarshalIndent(votes, "", "  ")
+	err := ioutil.WriteFile("votes.json", b, 0644)
+	if err != nil {
+		log.Fatalf("Couldnt write db: %v", err)
+	}
+}
+
+func verifyToken(tokenStr string) (*jwtverifier.Jwt, error) {
+
+	toValidate := map[string]string{}
+	toValidate["aud"] = "api://default"
+	toValidate["cid"] = "0oabsbm6ga3Sy1tIf356"
+
+	jwtVerifierSetup := jwtverifier.JwtVerifier{
+		Issuer:           "https://dev-343286.okta.com/oauth2/default",
+		ClaimsToValidate: toValidate,
+	}
+
+	verifier := jwtVerifierSetup.New()
+	verifier.SetLeeway(60)
+
+	token, err := verifier.VerifyAccessToken(tokenStr)
+	return token, err
+}
+
+func voteHandler(w http.ResponseWriter, r *http.Request) {
+	h := r.Header.Get("Authorization")
+	if !strings.HasPrefix(h, bearerStr) {
+		w.WriteHeader(http.StatusUnauthorized)
+		log.Printf("No auth header: [%s]", h)
+		return
+	}
+	tokenStr := h[len(bearerStr):]
+	tok, err := verifyToken(tokenStr)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		log.Printf("Verification failure: %v", err)
+		return
+	}
+	claims := tok.Claims
+	log.Printf("claims: %v", claims)
+
 	switch r.Method {
 	case http.MethodGet:
 		// just get all
+	case http.MethodDelete:
+		// delete a vote
+		// replace with received blob
+		myVote := &vote{}
+		d := json.NewDecoder(r.Body)
+		err = d.Decode(myVote)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			log.Printf("Couldnt decode: %v", err)
+			return
+		}
+		//		myVote.PersonID = claims[""]
+		lock.Lock()
+		found := false
+		newVotes := []*vote{}
+		for _, v := range votes {
+			if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
+				found = true
+			} else {
+				newVotes = append(newVotes, v)
+			}
+		}
+		votes = newVotes
+		lock.Unlock()
+		if found {
+			writeVotes()
+			log.Printf("Updated: %+v", myVote)
+		}
+	case http.MethodPost:
+		// replace with received blob
+		myVote := &vote{}
+		d := json.NewDecoder(r.Body)
+		err = d.Decode(myVote)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			log.Printf("Couldnt decode: %v", err)
+			return
+		}
+		//		myVote.PersonID = claims[""]
+		lock.Lock()
+		found := false
+		for _, v := range votes {
+			if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
+				v.Up = myVote.Up
+				found = true
+			}
+		}
+		if !found {
+			votes = append(votes, myVote)
+		}
+		lock.Unlock()
+		writeVotes()
+		log.Printf("Updated: %+v", myVote)
+	}
+	lock.RLock()
+	defer lock.RUnlock()
+	b, _ := json.Marshal(votes)
+	w.Write(b)
+	log.Printf("Returned: %+v", votes)
+}
+
+const bearerStr = "Bearer "
+
+func videosHandler(w http.ResponseWriter, r *http.Request) {
+	h := r.Header.Get("Authorization")
+	if !strings.HasPrefix(h, bearerStr) {
+		w.WriteHeader(http.StatusUnauthorized)
+		log.Printf("No auth header: [%s]", h)
+		return
+	}
+	tokenStr := h[len(bearerStr):]
+	tok, err := verifyToken(tokenStr)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		log.Printf("Verification failure: %v", err)
+		return
+	}
+	claims := tok.Claims
+	log.Printf("claims: %s", claims)
+	switch r.Method {
+	case http.MethodGet:
+		// just get all
+	case http.MethodPost:
+		// apply a vote
 	case http.MethodPut:
-		myVideos := []video{}
+		// replace with received blob
+		myVideos := []*video{}
 		d := json.NewDecoder(r.Body)
 		err := d.Decode(&myVideos)
 		if err != nil {

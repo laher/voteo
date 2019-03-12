@@ -54,6 +54,10 @@ ul.list {
   list-style: none;
 }
 
+ul.list img {
+  cursor: pointer;
+}
+
 #logged-in-inner {
   max-width: 992px;
   width: 100%;

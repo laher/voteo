@@ -1,35 +1,91 @@
-"use strict";
+'use strict';
 
 let state = {
-  userId: null,
+  personId: null,
   items: [
-    { id: "X7hFERntlog", title: "Fearless Org", votes: 0 }, 
-    { id: "d_HHnEROy_w", title: "Stop managing", votes: -10 }, 
-    { id: "BCkCvay4-DQ", title: "Foos", votes: 1 }
+    { id: 'X7hFERntlog', title: 'Fearless Org', votes: 0 },
+    { id: 'd_HHnEROy_w', title: 'Stop managing', votes: -10 },
+    { id: 'BCkCvay4-DQ', title: 'Foos', votes: 1 },
   ],
-  selectedItem: "X7hFERntlog"
-};
-const items = (id) => {
-  return state.items.sort((a, b) => b.votes - a.votes ).map( i => `
-    <li><div>
-    <div onclick="setSelectedItem('${i.id}')">${i.title} (${i.votes} votes)</div>
-    <div>
-    <img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${i.id}')" />
-    <img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${i.id}')" />
-    </div>
-    </div></li>` ).join('');
+  votes: [{ videoId: 'x7hFERntlog', personId: 'am', up: true }],
+  selectedItem: 'X7hFERntlog',
 };
 
-const setSelectedItem = (i) => {
+const countVotes = id => {
+  return (
+    state.votes.filter(vote => vote.videoId == id && vote.up).length -
+    state.votes.filter(vote => vote.videoId == id && !vote.up).length
+  );
+};
+
+const haveIUpvoted = id => {
+  return (
+    state.votes.filter(
+      vote => vote.videoId == id && vote.up && vote.personId == state.personId
+    ).length > 0
+  );
+};
+
+const haveIDownvoted = id => {
+  return (
+    state.votes.filter(
+      vote => vote.videoId == id && !vote.up && vote.personId == state.personId
+    ).length > 0
+  );
+};
+
+const haveIVoted = id => {
+  return (
+    state.votes.filter(
+      vote => vote.videoId == id && vote.personId == state.personId
+    ).length > 0
+  );
+};
+
+const items = id => {
+  return state.items
+    .sort((a, b) => countVotes(b.id) - countVotes(a.id))
+    .map(
+      i =>
+        `
+    <li><div>
+    <div onclick="setSelectedItem('${i.id}')">${i.title} (${countVotes(
+          i.id
+        )} votes)</div>
+    <div>` +
+        (haveIUpvoted(i.id)
+          ? `<img src="https://img.icons8.com/material/24/000000/undo.png" onclick="unvote('${
+              i.id
+            }')" />`
+          : `
+    <img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${
+      i.id
+    }')" />`) +
+        (haveIDownvoted(i.id)
+          ? `<img src="https://img.icons8.com/material/24/000000/undo.png" onclick="unvote('${
+              i.id
+            }')" />`
+          : `<img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${
+              i.id
+            }')" /> `) +
+        `</div>
+    </div></li>`
+    )
+    .join('');
+};
+
+const setSelectedItem = i => {
   state.selectedItem = i;
   show(i);
 };
 
-const show = (i) => {
+const show = i => {
   if (!i) {
     return;
   }
-  document.getElementById('player').setAttribute('src', 'https://www.youtube.com/embed/' + i);
+  document
+    .getElementById('player')
+    .setAttribute('src', 'https://www.youtube.com/embed/' + i);
   const item = state.items.find(item => item.id === i);
   let title = 'preview';
   if (item) {
@@ -38,22 +94,49 @@ const show = (i) => {
   document.getElementById('title').innerHTML = title;
 };
 
-const upvote = (i) => {
+const upvote = i => {
   const item = state.items.find(item => item.id === i);
-  item.votes++;
-  putVideos();
-}
+  let vote = state.votes.find(
+    vote => vote.personId == state.personId && vote.videoId == i
+  );
+  if (!vote) {
+    vote = { personId: state.personId, videoId: i };
+  }
+  vote.up = true;
+  postVote(vote);
+};
 
-const downvote = (i) => {
+const unvote = i => {
+  const vote = state.votes.find(
+    vote => vote.personId == state.personId && vote.videoId == i
+  );
+  if (!vote) {
+    vote = { personId: state.personId, videoId: i };
+  }
+  deleteVote(vote);
+};
+
+const downvote = i => {
   const item = state.items.find(item => item.id === i);
-  item.votes--;
-  putVideos();
-}
+  const vote = state.votes.find(
+    vote => vote.personId == state.personId && vote.videoId == i
+  );
+  if (!vote) {
+    vote = { personId: state.personId, videoId: i };
+  }
+  vote.up = false;
+  postVote(vote);
+};
 
 const getVideos = () => {
-  fetch(`/videos`, { 
+  console.log('token', signIn.tokenManager.get('access_token'));
+  fetch(`/videos`, {
     method: 'get',
-    cache: "no-cache",
+    cache: 'no-cache',
+    headers: {
+      Authorization:
+        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
+    },
   })
     .then(function(response) {
       console.log(response);
@@ -62,28 +145,50 @@ const getVideos = () => {
     .then(function(json) {
       console.log(json);
       state.items = json;
-      //push({id: id, title: json.title});
       reflop();
     });
-}
+};
 
-const cleanInput = (input) => {
-  const pref = "https://www.youtube.com/watch?v=";
+const getVotes = () => {
+  console.log('token', signIn.tokenManager.get('access_token'));
+  fetch(`/vote`, {
+    method: 'get',
+    cache: 'no-cache',
+    headers: {
+      Authorization:
+        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
+    },
+  })
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(json);
+      state.votes = json;
+      reflop();
+    });
+};
+
+const cleanInput = input => {
+  const pref = 'https://www.youtube.com/watch?v=';
   if (input.startsWith(pref)) {
     return input.substring(pref.length);
   }
   return input;
-}
+};
 
 const putVideos = () => {
-  fetch(`/videos`, { 
+  fetch(`/videos`, {
     method: 'PUT',
-    cache: "no-cache",
+    cache: 'no-cache',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
+      Authorization:
+        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
     },
-    redirect: "follow", // manual, *follow, error
-    referrer: "no-referrer", // no-referrer, *client
+    redirect: 'follow', // manual, *follow, error
+    referrer: 'no-referrer', // no-referrer, *client
     body: JSON.stringify(state.items), // body data type must match "Content-Type" header
   })
     .then(function(response) {
@@ -93,6 +198,54 @@ const putVideos = () => {
     .then(function(json) {
       console.log(json);
       state.items = json;
+      reflop();
+    });
+};
+
+const postVote = vote => {
+  fetch(`/vote`, {
+    method: 'POST',
+    cache: 'no-cache',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization:
+        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
+    },
+    redirect: 'follow', // manual, *follow, error
+    referrer: 'no-referrer', // no-referrer, *client
+    body: JSON.stringify(vote), // body data type must match "Content-Type" header
+  })
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(json);
+      state.votes = json;
+      reflop();
+    });
+};
+
+const deleteVote = vote => {
+  fetch(`/vote`, {
+    method: 'DELETE',
+    cache: 'no-cache',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization:
+        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
+    },
+    redirect: 'follow', // manual, *follow, error
+    referrer: 'no-referrer', // no-referrer, *client
+    body: JSON.stringify(vote), // body data type must match "Content-Type" header
+  })
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(json);
+      state.votes = json;
       reflop();
     });
 };
@@ -107,7 +260,7 @@ const preview = () => {
 const add = () => {
   const id = cleanInput(document.getElementById('addbox').value);
 
-  fetch(`/yt/data?id=${id}`, { 
+  fetch(`/yt/data?id=${id}`, {
     method: 'get',
   })
     .then(function(response) {
@@ -119,9 +272,9 @@ const add = () => {
       console.log(json.title);
       let title = json.title;
       if (title.length > 30) {
-        title = title.substring(0, 30) + " ..."; 
+        title = title.substring(0, 30) + ' ...';
       }
-      state.items.push({id: id, title: title});
+      state.items.push({ id: id, title: title });
       state.selectedItem = id;
       putVideos();
     });
@@ -136,42 +289,44 @@ const reflop = async () => {
     document.getElementById('videoCount').innerHTML = state.items.length;
   }
   show(state.selectedItem);
-}
+};
 
 const showSignOut = () => {
-  console.log("show signout");
+  console.log('show signout');
   signIn.hide();
+  document.getElementById('name').innerHTML = state.personId;
   document.getElementById('logged-in').style.display = 'block';
-}
+};
 
 const showSignIn = () => {
-  console.log("show signin");
+  console.log('show signin');
   document.getElementById('logged-in').style.display = 'none';
-  signIn.renderEl({ el: '#widget-container' }, (res) => {
+  signIn.renderEl({ el: '#widget-container' }, res => {
     if (res.status === 'SUCCESS') {
-      console.log("signin success", res);
+      console.log('signin success', res);
       signIn.tokenManager.add('id_token', res[0]);
       signIn.tokenManager.add('access_token', res[1]);
-      console.log("signin success. tokenManager:", signIn.tokenManager);
-      document.getElementById('name').innerHTML = res[0].claims.email;
+      console.log('signin success. tokenManager:', signIn.tokenManager);
+      state.personId = res[0].claims.email;
       showSignOut();
       getVideos();
+      getVotes();
     }
   });
-}
+};
 
 let signIn = null;
 const start = () => {
-  document.getElementById('sign-out').addEventListener('click', (event) => {
+  document.getElementById('sign-out').addEventListener('click', event => {
     event.preventDefault();
 
-    console.log("signout clicked");
-    signIn.session.close((err) => {
+    console.log('signout clicked');
+    signIn.session.close(err => {
       if (err) {
-        alert(`Error: ${err}`)
+        alert(`Error: ${err}`);
       }
-      showSignIn()
-    })
+      showSignIn();
+    });
   });
   signIn = new OktaSignIn({
     baseUrl: 'https://dev-343286.okta.com',
@@ -179,29 +334,26 @@ const start = () => {
     redirectUri: 'http://localhost:3000/auth/callback/login',
     authParams: {
       issuer: 'default',
-      responseType: ['id_token','token']
-    }
+      responseType: ['id_token', 'token'],
+    },
   });
   init();
-}
+};
 
 const init = () => {
-  signIn.session.get(async (res) => {
-      if (res.status === 'ACTIVE') {
-        getVideos();
-        console.log('login already active', res);
-        document.getElementById('name').innerHTML = res.login;
-
-        console.log('tokenManager', signIn.tokenManager);
-
-        showSignOut();
-      } else {
-        console.log('not signed in');
-        showSignIn();
-      }
-    })
-
-}
+  signIn.session.get(async res => {
+    if (res.status === 'ACTIVE') {
+      console.log('login already active', res);
+      state.personId = res.login;
+      showSignOut();
+      getVideos();
+      getVotes();
+    } else {
+      console.log('not signed in');
+      showSignIn();
+    }
+  });
+};
 
 // Listen on page load:
 window.addEventListener('load', start);
