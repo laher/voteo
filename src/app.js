@@ -359,6 +359,7 @@ const init = () => {
     if (res.status === 'ACTIVE') {
       console.log('login already active', res);
       state.personId = res.login;
+      state.accessToken = signIn.tokenManager.get('access_token').accessToken;
       showSignOut();
       getVideos();
       getVotes();
