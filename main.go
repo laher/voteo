@@ -31,7 +31,7 @@ func main() {
 	loadVotes()
 	log.Println("Listening...")
 	if prod {
-		log.Fatal(http.Serve(autocert.NewListener("videpoll.laher.net.nz"), nil))
+		log.Fatal(http.Serve(autocert.NewListener("voteo.laher.net.nz"), nil))
 	} else {
 		log.Fatal(http.ListenAndServe("localhost:3000", nil))
 	}
