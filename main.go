@@ -30,13 +30,14 @@ func main() {
 	http.HandleFunc("/auth/callback/login", loginCallbackHandler)
 	http.HandleFunc("/auth/callback/logout", logoutCallbackHandler)
 	http.HandleFunc("/auth/settings", authInfoHandler)
+	loadConfig()
 	loadVideos()
 	loadVotes()
 	log.Println("Listening...")
-	if prod {
-		log.Fatal(http.Serve(autocert.NewListener("voteo.laher.net.nz"), nil))
+	if config.Env == "prod" {
+		log.Fatal(http.Serve(autocert.NewListener(config.Address), nil))
 	} else {
-		log.Fatal(http.ListenAndServe("localhost:3000", nil))
+		log.Fatal(http.ListenAndServe(config.Address, nil))
 	}
 }
 
@@ -86,6 +87,42 @@ func loadVideos() {
 	videos = myVideos
 }
 
+type conf struct {
+	Env     string
+	Address string
+	Auth    authConf
+}
+
+type authConf struct {
+	Type    string
+	Okta    oktaConf
+	Env     string
+	Address string
+}
+
+type oktaConf struct {
+	BaseURL     string                   `json:"baseUrl"`
+	ClientID    string                   `json:"clientId"`
+	RedirectURI string                   `json:"redirectUri"`
+	AuthParams  map[string]interface{}   `json:"authParams"`
+	idps        []map[string]interface{} `json:"idps"`
+}
+
+var config = conf{}
+
+func loadConfig() {
+	b, err := ioutil.ReadFile("config.json")
+	if err != nil {
+		log.Fatalf("couldnt read config: %v", err)
+	}
+	myVotes := []*vote{}
+	err = json.Unmarshal(b, &config)
+	if err != nil {
+		log.Fatalf("Couldnt decode config: %v", err)
+	}
+	votes = myVotes
+}
+
 func loadVotes() {
 	lock.Lock()
 	defer lock.Unlock()
@@ -128,10 +165,10 @@ func verifyToken(tokenStr string) (*jwtverifier.Jwt, error) {
 
 	toValidate := map[string]string{}
 	toValidate["aud"] = "api://default"
-	toValidate["cid"] = "0oabsbm6ga3Sy1tIf356"
+	toValidate["cid"] = config.Auth.Okta.ClientID
 
 	jwtVerifierSetup := jwtverifier.JwtVerifier{
-		Issuer:           "https://dev-343286.okta.com/oauth2/default",
+		Issuer:           config.Auth.Okta.BaseURL + "/oauth2/default",
 		ClaimsToValidate: toValidate,
 	}
 
@@ -227,26 +264,13 @@ const bearerStr = "Bearer "
 
 func authInfoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var url string
-	if prod {
-		url = "https://voteo.laher.net.nz/auth/callback/login"
-	} else {
-		url = "http://localhost:3000/auth/callback/login"
-
+	bytes, err := json.Marshal(&config.Auth.Okta)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Error marshaling auth config: %v", err)
+		return
 	}
-	w.Write([]byte(`{
-	"type": "okta",
-	"okta": {
-        	"baseUrl": "https://dev-343286.okta.com",
-        	"clientId": "0oabsbm6ga3Sy1tIf356",
-        	"redirectUri": "` + url + `",
-        	"authParams": {
-        	"issuer": "default",
-          	"responseType": ["id_token", "token"]
-        },
-        "idps": [{ "type": "GOOGLE", "id": "0oack0yq3VXGwi171356" }]
-      }
-}`))
+	w.Write(bytes)
 }
 
 func videosHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,3 +1,2 @@
-videos.json
-votes.json
+*.json
 .tern-port
