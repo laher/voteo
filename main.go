@@ -15,10 +15,11 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
+var (
+	prod bool
+)
+
 func main() {
-	var (
-		prod bool
-	)
 	flag.BoolVar(&prod, "prod", false, "is this prod?")
 	flag.Parse()
 	fs := http.FileServer(http.Dir("src"))
@@ -28,6 +29,7 @@ func main() {
 	http.HandleFunc("/yt/data", ytDataHandler)
 	http.HandleFunc("/auth/callback/login", loginCallbackHandler)
 	http.HandleFunc("/auth/callback/logout", logoutCallbackHandler)
+	http.HandleFunc("/auth/settings", authInfoHandler)
 	loadVideos()
 	loadVotes()
 	log.Println("Listening...")
@@ -222,6 +224,30 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 const bearerStr = "Bearer "
+
+func authInfoHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var url string
+	if prod {
+		url = "http://localhost:3000/auth/callback/login"
+	} else {
+		url = "https://voteo.laher.net.nz/auth/callback/login"
+
+	}
+	w.Write([]byte(`{
+	"type": "okta",
+	"okta": {
+        	"baseUrl": "https://dev-343286.okta.com",
+        	"clientId": "0oabsbm6ga3Sy1tIf356",
+        	"redirectUri": "` + url + `",
+        	"authParams": {
+        	"issuer": "default",
+          	"responseType": ["id_token", "token"]
+        },
+        "idps": [{ "type": "GOOGLE", "id": "0oack0yq3VXGwi171356" }]
+      }
+}`))
+}
 
 func videosHandler(w http.ResponseWriter, r *http.Request) {
 	h := r.Header.Get("Authorization")

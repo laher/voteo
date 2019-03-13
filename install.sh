@@ -1,1 +1,1 @@
-sudo setcap cap_net_bind_service=+ep ./videpoll
+sudo setcap cap_net_bind_service=+ep ./voteo

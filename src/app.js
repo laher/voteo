@@ -10,6 +10,7 @@ let state = {
   votes: [{ videoId: 'x7hFERntlog', personId: 'am', up: true }],
   selectedItem: 'X7hFERntlog',
 };
+let signIn = null;
 
 const countVotes = id => {
   return (
@@ -318,8 +319,24 @@ const showSignIn = () => {
   });
 };
 
-let signIn = null;
 const start = () => {
+  fetch(`/auth/settings`, {
+    method: 'get',
+  })
+    .then(function(response) {
+      console.log(response);
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(JSON.stringify(json));
+      if (json['type'] == 'okta') {
+        signIn = new OktaSignIn(json.okta);
+        doOkta();
+      }
+    });
+};
+
+const doOkta = () => {
   document.getElementById('sign-out').addEventListener('click', event => {
     event.preventDefault();
 
@@ -330,16 +347,6 @@ const start = () => {
       }
       showSignIn();
     });
-  });
-  signIn = new OktaSignIn({
-    baseUrl: 'https://dev-343286.okta.com',
-    clientId: '0oabsbm6ga3Sy1tIf356',
-    redirectUri: 'http://localhost:3000/auth/callback/login',
-    authParams: {
-      issuer: 'default',
-      responseType: ['id_token', 'token'],
-    },
-    idps: [{ type: 'GOOGLE', id: '0oack0yq3VXGwi171356' }],
   });
   init();
 };
