@@ -332,6 +332,10 @@ const start = () => {
       if (json['type'] == 'okta') {
         signIn = new OktaSignIn(json.okta);
         doOkta();
+      } else {
+        // assume it's no-login
+        getVideos();
+        getVotes();
       }
     });
 };

@@ -229,9 +229,9 @@ func authInfoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var url string
 	if prod {
-		url = "http://localhost:3000/auth/callback/login"
-	} else {
 		url = "https://voteo.laher.net.nz/auth/callback/login"
+	} else {
+		url = "http://localhost:3000/auth/callback/login"
 
 	}
 	w.Write([]byte(`{
