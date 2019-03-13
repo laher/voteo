@@ -9,6 +9,8 @@ let state = {
   ],
   votes: [{ videoId: 'x7hFERntlog', personId: 'am', up: true }],
   selectedItem: 'X7hFERntlog',
+  idToken: null,
+  accessToken: null,
 };
 let signIn = null;
 
@@ -135,8 +137,7 @@ const getVideos = () => {
     method: 'get',
     cache: 'no-cache',
     headers: {
-      Authorization:
-        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
+      Authorization: 'Bearer ' + state.accessToken,
     },
   })
     .then(function(response) {
@@ -156,8 +157,7 @@ const getVotes = () => {
     method: 'get',
     cache: 'no-cache',
     headers: {
-      Authorization:
-        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
+      Authorization: 'Bearer ' + state.accessToken,
     },
   })
     .then(function(response) {
@@ -185,8 +185,7 @@ const putVideos = () => {
     cache: 'no-cache',
     headers: {
       'Content-Type': 'application/json',
-      Authorization:
-        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
+      Authorization: 'Bearer ' + state.accessToken,
     },
     redirect: 'follow', // manual, *follow, error
     referrer: 'no-referrer', // no-referrer, *client
@@ -209,8 +208,7 @@ const postVote = vote => {
     cache: 'no-cache',
     headers: {
       'Content-Type': 'application/json',
-      Authorization:
-        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
+      Authorization: 'Bearer ' + state.accessToken,
     },
     redirect: 'follow', // manual, *follow, error
     referrer: 'no-referrer', // no-referrer, *client
@@ -233,8 +231,7 @@ const deleteVote = vote => {
     cache: 'no-cache',
     headers: {
       'Content-Type': 'application/json',
-      Authorization:
-        'Bearer ' + signIn.tokenManager.get('access_token').accessToken,
+      Authorization: 'Bearer ' + state.accessToken,
     },
     redirect: 'follow', // manual, *follow, error
     referrer: 'no-referrer', // no-referrer, *client
@@ -310,6 +307,8 @@ const showSignIn = () => {
       console.log('signin success', res);
       signIn.tokenManager.add('id_token', res[0]);
       signIn.tokenManager.add('access_token', res[1]);
+      state.idToken = res[0];
+      state.accessToken = res[1].accessToken;
       console.log('signin success. tokenManager:', signIn.tokenManager);
       state.personId = res[0].claims.email;
       showSignOut();
