@@ -20,6 +20,7 @@ func main() {
 		prod bool
 	)
 	flag.BoolVar(&prod, "prod", false, "is this prod?")
+	flag.Parse()
 	fs := http.FileServer(http.Dir("src"))
 	http.Handle("/", fs)
 	http.HandleFunc("/videos", videosHandler)
