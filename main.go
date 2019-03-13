@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"io"
 	"io/ioutil"
 	"log"
@@ -11,9 +12,14 @@ import (
 	"sync"
 
 	jwtverifier "github.com/okta/okta-jwt-verifier-golang"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 func main() {
+	var (
+		prod bool
+	)
+	flag.BoolVar(&prod, "prod", false, "is this prod?")
 	fs := http.FileServer(http.Dir("src"))
 	http.Handle("/", fs)
 	http.HandleFunc("/videos", videosHandler)
@@ -24,7 +30,11 @@ func main() {
 	loadVideos()
 	loadVotes()
 	log.Println("Listening...")
-	http.ListenAndServe(":3000", nil)
+	if prod {
+		log.Fatal(http.Serve(autocert.NewListener("videpoll.laher.net.nz"), nil))
+	} else {
+		log.Fatal(http.ListenAndServe("localhost:3000", nil))
+	}
 }
 
 type video struct {

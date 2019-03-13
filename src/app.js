@@ -3,9 +3,9 @@
 let state = {
   personId: null,
   items: [
-    { id: 'X7hFERntlog', title: 'Fearless Org', votes: 0 },
-    { id: 'd_HHnEROy_w', title: 'Stop managing', votes: -10 },
-    { id: 'BCkCvay4-DQ', title: 'Foos', votes: 1 },
+    { id: 'X7hFERntlog', title: 'Fearless Org' },
+    { id: 'd_HHnEROy_w', title: 'Stop managing' },
+    { id: 'BCkCvay4-DQ', title: 'Foos' },
   ],
   votes: [{ videoId: 'x7hFERntlog', personId: 'am', up: true }],
   selectedItem: 'X7hFERntlog',
@@ -280,8 +280,8 @@ const add = () => {
     });
 };
 
-// The router code. Takes a URL, checks against the list of supported routes and then renders the corresponding content page.
 const reflop = async () => {
+  var t0 = performance.now();
   document.getElementById('logged-in').style.display = 'block';
   const vidList = document.getElementById('videoList');
   if (vidList) {
@@ -289,6 +289,9 @@ const reflop = async () => {
     document.getElementById('videoCount').innerHTML = state.items.length;
   }
   show(state.selectedItem);
+
+  var t1 = performance.now();
+  console.log('Call to reflop took ' + (t1 - t0) + ' milliseconds.');
 };
 
 const showSignOut = () => {
@@ -336,6 +339,7 @@ const start = () => {
       issuer: 'default',
       responseType: ['id_token', 'token'],
     },
+    idps: [{ type: 'GOOGLE', id: '0oack0yq3VXGwi171356' }],
   });
   init();
 };
