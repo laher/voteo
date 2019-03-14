@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strings"
 
-	jwtverifier "github.com/okta/okta-jwt-verifier-golang"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -31,8 +30,6 @@ func main() {
 	http.HandleFunc("/videos", videosHandler)
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/yt/data", ytDataHandler)
-	http.HandleFunc("/auth/callback/login", loginCallbackHandler)
-	http.HandleFunc("/auth/callback/logout", logoutCallbackHandler)
 	http.HandleFunc("/auth/settings", authInfoHandler)
 	loadConfig()
 	db.loadVideos()
@@ -88,24 +85,6 @@ func loadConfig() {
 	if err != nil {
 		log.Fatalf("Couldnt decode config: %v", err)
 	}
-}
-
-func verifyToken(tokenStr string) (*jwtverifier.Jwt, error) {
-
-	toValidate := map[string]string{}
-	toValidate["aud"] = "api://default"
-	toValidate["cid"] = config.Auth.Okta.ClientID
-
-	jwtVerifierSetup := jwtverifier.JwtVerifier{
-		Issuer:           config.Auth.Okta.BaseURL + "/oauth2/default",
-		ClaimsToValidate: toValidate,
-	}
-
-	verifier := jwtVerifierSetup.New()
-	verifier.SetLeeway(60)
-
-	token, err := verifier.VerifyAccessToken(tokenStr)
-	return token, err
 }
 
 func voteHandler(w http.ResponseWriter, r *http.Request) {
@@ -197,17 +176,6 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 
 const bearerStr = "Bearer "
 
-func authInfoHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	bytes, err := json.Marshal(&config.Auth)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("Error marshaling auth config: %v", err)
-		return
-	}
-	w.Write(bytes)
-}
-
 func videosHandler(w http.ResponseWriter, r *http.Request) {
 	h := r.Header.Get("Authorization")
 	if !strings.HasPrefix(h, bearerStr) {
@@ -277,12 +245,4 @@ func ytDataHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Printf("Error retrieving video metadata for %+v: %v", id, resp.Status)
 	}
-}
-
-func loginCallbackHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("login redirect ... %v", r.URL.Query())
-}
-
-func logoutCallbackHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("logout redirect ... %v", r.URL.Query())
 }
