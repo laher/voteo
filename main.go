@@ -94,10 +94,10 @@ type conf struct {
 }
 
 type authConf struct {
-	Type    string
-	Okta    oktaConf
-	Env     string
-	Address string
+	Type    string   `json:"type"`
+	Okta    oktaConf `json:"okta"`
+	Env     string   `json:"env"`
+	Address string   `json:"address"`
 }
 
 type oktaConf struct {
@@ -264,7 +264,7 @@ const bearerStr = "Bearer "
 
 func authInfoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	bytes, err := json.Marshal(&config.Auth.Okta)
+	bytes, err := json.Marshal(&config.Auth)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Error marshaling auth config: %v", err)

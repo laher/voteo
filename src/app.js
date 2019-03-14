@@ -11,8 +11,8 @@ let state = {
   selectedItem: 'X7hFERntlog',
   idToken: null,
   accessToken: null,
+  oktaSignIn: null,
 };
-let signIn = null;
 
 const countVotes = id => {
   return (
@@ -132,7 +132,6 @@ const downvote = i => {
 };
 
 const getVideos = () => {
-  console.log('token', signIn.tokenManager.get('access_token'));
   fetch(`/videos`, {
     method: 'get',
     cache: 'no-cache',
@@ -152,7 +151,6 @@ const getVideos = () => {
 };
 
 const getVotes = () => {
-  console.log('token', signIn.tokenManager.get('access_token'));
   fetch(`/vote`, {
     method: 'get',
     cache: 'no-cache',
@@ -294,7 +292,7 @@ const reflop = async () => {
 
 const showSignOut = () => {
   console.log('show signout');
-  signIn.hide();
+  hideOkta();
   document.getElementById('name').innerHTML = state.personId;
   document.getElementById('logged-in').style.display = 'block';
 };
@@ -302,20 +300,14 @@ const showSignOut = () => {
 const showSignIn = () => {
   console.log('show signin');
   document.getElementById('logged-in').style.display = 'none';
-  signIn.renderEl({ el: '#widget-container' }, res => {
-    if (res.status === 'SUCCESS') {
-      console.log('signin success', res);
-      signIn.tokenManager.add('id_token', res[0]);
-      signIn.tokenManager.add('access_token', res[1]);
-      state.idToken = res[0];
-      state.accessToken = res[1].accessToken;
-      console.log('signin success. tokenManager:', signIn.tokenManager);
-      state.personId = res[0].claims.email;
-      showSignOut();
-      getVideos();
-      getVotes();
-    }
-  });
+  if (state.oktaSignIn) {
+    renderOktaSignIn();
+  } else {
+    state.personId = res[0].claims.email;
+    showSignOut();
+    getVideos();
+    getVotes();
+  }
 };
 
 const start = () => {
@@ -329,45 +321,15 @@ const start = () => {
     .then(function(json) {
       console.log(JSON.stringify(json));
       if (json['type'] == 'okta') {
-        signIn = new OktaSignIn(json.okta);
+        state.oktaSignIn = new OktaSignIn(json.okta);
         doOkta();
       } else {
+        state.personId = 'unknown';
         // assume it's no-login
         getVideos();
         getVotes();
       }
     });
-};
-
-const doOkta = () => {
-  document.getElementById('sign-out').addEventListener('click', event => {
-    event.preventDefault();
-
-    console.log('signout clicked');
-    signIn.session.close(err => {
-      if (err) {
-        alert(`Error: ${err}`);
-      }
-      showSignIn();
-    });
-  });
-  init();
-};
-
-const init = () => {
-  signIn.session.get(async res => {
-    if (res.status === 'ACTIVE') {
-      console.log('login already active', res);
-      state.personId = res.login;
-      state.accessToken = signIn.tokenManager.get('access_token').accessToken;
-      showSignOut();
-      getVideos();
-      getVotes();
-    } else {
-      console.log('not signed in');
-      showSignIn();
-    }
-  });
 };
 
 // Listen on page load:
