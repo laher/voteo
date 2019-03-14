@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -33,8 +35,8 @@ func main() {
 	http.HandleFunc("/auth/callback/logout", logoutCallbackHandler)
 	http.HandleFunc("/auth/settings", authInfoHandler)
 	loadConfig()
-	loadVideos()
-	loadVotes()
+	db.loadVideos()
+	db.loadVotes()
 	log.Println("Listening...")
 	if config.SSL {
 		log.Fatal(http.Serve(autocert.NewListener(config.Address), nil))
@@ -50,9 +52,10 @@ type video struct {
 }
 
 type vote struct {
-	VideoID  string `json:"videoId"`
-	PersonID string `json:"personId"`
-	Up       bool   `json:"up"`
+	VideoID    string `json:"videoId"`
+	PersonID   string `json:"personId,omitempty"`
+	PersonHash string `json:"personHash"`
+	Up         bool   `json:"up"`
 }
 
 type conf struct {
@@ -122,6 +125,11 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 	claims := tok.Claims
 	log.Printf("claims: %v", claims)
 
+	var personID string
+	personIDI, ok := claims["sub"]
+	if ok {
+		personID, ok = personIDI.(string)
+	}
 	switch r.Method {
 	case http.MethodGet:
 		// just get all
@@ -136,10 +144,12 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Couldnt decode: %v", err)
 			return
 		}
-		//		myVote.PersonID = claims[""]
+		hash := sha256.New()
+		hash.Write([]byte(personID))
+		myVote.PersonHash = fmt.Sprintf("%x", hash.Sum(nil))
 		found := false
 		newVotes := []*vote{}
-		for _, v := range getVotes() {
+		for _, v := range db.getVotes() {
 			if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
 				found = true
 			} else {
@@ -147,7 +157,7 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if found {
-			writeVotes(newVotes)
+			db.writeVotes(newVotes)
 			log.Printf("Updated: %+v", myVote)
 		}
 	case http.MethodPost:
@@ -160,22 +170,27 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Couldnt decode: %v", err)
 			return
 		}
-		//		myVote.PersonID = claims[""]
 		found := false
-		votes := getVotes()
-		for _, v := range votes {
+		myVotes := db.getVotes()
+		for _, v := range myVotes {
 			if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
 				v.Up = myVote.Up
 				found = true
 			}
 		}
 		if !found {
-			votes = append(votes, myVote)
+			myVotes = append(myVotes, myVote)
 		}
-		writeVotes(votes)
+		db.writeVotes(myVotes)
 		log.Printf("Updated: %+v", myVote)
 	}
+	votes := db.getVotes()
 	b, _ := json.Marshal(votes)
+	for _, vote := range votes {
+		if vote.PersonID != personID {
+			vote.PersonID = ""
+		}
+	}
 	w.Write(b)
 	log.Printf("Returned: %+v", votes)
 }
@@ -224,10 +239,10 @@ func videosHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Couldnt decode: %v", err)
 			return
 		}
-		writeVideos(myVideos)
+		db.writeVideos(myVideos)
 		log.Printf("Updated: %+v", myVideos)
 	}
-	videos := getVideos()
+	videos := db.getVideos()
 	b, _ := json.Marshal(videos)
 	w.Write(b)
 	log.Printf("Returned: %+v", videos)

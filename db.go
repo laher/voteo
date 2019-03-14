@@ -9,18 +9,22 @@ import (
 )
 
 var (
-	lock   = sync.RWMutex{}
-	videos = []*video{}
-	votes  = []*vote{}
+	db = &dtb{}
 )
 
-func loadVideos() {
-	lock.Lock()
-	defer lock.Unlock()
+type dtb struct {
+	lock   sync.RWMutex
+	videos []*video
+	votes  []*vote
+}
+
+func (db *dtb) loadVideos() {
+	db.lock.Lock()
+	defer db.lock.Unlock()
 	b, err := ioutil.ReadFile("videos.json")
 	if err != nil {
 		if os.IsNotExist(err) {
-			videos = initVideos
+			db.videos = initVideos
 			return
 		}
 		log.Fatalf("couldnt read db: %v", err)
@@ -30,16 +34,16 @@ func loadVideos() {
 	if err != nil {
 		log.Fatalf("Couldnt decode db: %v", err)
 	}
-	videos = myVideos
+	db.videos = myVideos
 }
 
-func loadVotes() {
-	lock.Lock()
-	defer lock.Unlock()
+func (db *dtb) loadVotes() {
+	db.lock.Lock()
+	defer db.lock.Unlock()
 	b, err := ioutil.ReadFile("votes.json")
 	if err != nil {
 		if os.IsNotExist(err) {
-			videos = initVideos
+			db.votes = []*vote{}
 			return
 		}
 		log.Fatalf("couldnt read db: %v", err)
@@ -49,47 +53,49 @@ func loadVotes() {
 	if err != nil {
 		log.Fatalf("Couldnt decode db: %v", err)
 	}
-	votes = myVotes
+	db.votes = myVotes
 }
 
-func getVideos() []*video {
-	lock.RLock()
-	defer lock.RUnlock()
-	newVideos := make([]*video, 0, len(videos))
-	for _, v := range videos {
-		newVideos = append(newVideos, v)
+func (db *dtb) getVideos() []*video {
+	db.lock.RLock()
+	defer db.lock.RUnlock()
+	newVideos := make([]*video, 0, len(db.videos))
+	for _, v := range db.videos {
+		vi := *v
+		newVideos = append(newVideos, &vi)
 	}
 	return newVideos
 }
 
-func writeVideos(myVideos []*video) {
-	lock.Lock()
-	defer lock.Unlock()
-	b, _ := json.MarshalIndent(videos, "", "  ")
+func (db *dtb) writeVideos(myVideos []*video) {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+	b, _ := json.MarshalIndent(myVideos, "", "  ")
 	err := ioutil.WriteFile("videos.json", b, 0644)
 	if err != nil {
 		log.Fatalf("Couldnt write db: %v", err)
 	}
-	videos = myVideos
+	db.videos = myVideos
 }
 
-func getVotes() []*vote {
-	lock.RLock()
-	defer lock.RUnlock()
-	newVotes := make([]*vote, 0, len(votes))
-	for _, v := range votes {
-		newVotes = append(newVotes, v)
+func (db *dtb) getVotes() []*vote {
+	db.lock.RLock()
+	defer db.lock.RUnlock()
+	newVotes := make([]*vote, 0, len(db.votes))
+	for _, v := range db.votes { // defensive copy
+		vo := *v
+		newVotes = append(newVotes, &vo)
 	}
 	return newVotes
 }
 
-func writeVotes(myVotes []*vote) {
-	lock.Lock()
-	defer lock.Unlock()
-	b, _ := json.MarshalIndent(votes, "", "  ")
+func (db *dtb) writeVotes(myVotes []*vote) {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+	b, _ := json.MarshalIndent(myVotes, "", "  ")
 	err := ioutil.WriteFile("votes.json", b, 0644)
 	if err != nil {
 		log.Fatalf("Couldnt write db: %v", err)
 	}
-	votes = myVotes
+	db.votes = myVotes
 }
