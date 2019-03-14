@@ -2,26 +2,28 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strings"
-	"sync"
 
 	jwtverifier "github.com/okta/okta-jwt-verifier-golang"
 	"golang.org/x/crypto/acme/autocert"
 )
 
 var (
-	prod bool
+	// some videos for the first run (when there's no db yet)
+	initVideos = []*video{
+		{ID: "JntjzuI5rGM", Title: "Dave Grohl Tells ...", Votes: 0},
+		{ID: "X7hFERntlog", Title: "Fearless Organization", Votes: 0},
+		{ID: "d_HHnEROy_w", Title: "Stop managing, start ...", Votes: -1},
+		{ID: "BCkCvay4-DQ", Title: "Push Kick", Votes: 1},
+	}
+	config conf
 )
 
 func main() {
-	flag.BoolVar(&prod, "prod", false, "is this prod?")
-	flag.Parse()
 	fs := http.FileServer(http.Dir("src"))
 	http.Handle("/", fs)
 	http.HandleFunc("/videos", videosHandler)
@@ -34,7 +36,7 @@ func main() {
 	loadVideos()
 	loadVotes()
 	log.Println("Listening...")
-	if config.Env == "prod" {
+	if config.SSL {
 		log.Fatal(http.Serve(autocert.NewListener(config.Address), nil))
 	} else {
 		log.Fatal(http.ListenAndServe(config.Address, nil))
@@ -53,44 +55,10 @@ type vote struct {
 	Up       bool   `json:"up"`
 }
 
-var (
-	videos     = []*video{}
-	votes      = []*vote{}
-	initVideos = []*video{
-		{ID: "JntjzuI5rGM", Title: "Dave Grohl Tells ...", Votes: 0},
-		{ID: "X7hFERntlog", Title: "Fearless Organization", Votes: 0},
-		{ID: "d_HHnEROy_w", Title: "Stop managing, start ...", Votes: -1},
-		{ID: "BCkCvay4-DQ", Title: "Push Kick", Votes: 1},
-	}
-	initVotes = []*vote{
-		{VideoID: "BCkCvay4-DQ", PersonID: "am@voteo", Up: true},
-	}
-	lock = sync.RWMutex{}
-)
-
-func loadVideos() {
-	lock.Lock()
-	defer lock.Unlock()
-	b, err := ioutil.ReadFile("videos.json")
-	if err != nil {
-		if os.IsNotExist(err) {
-			videos = initVideos
-			return
-		}
-		log.Fatalf("couldnt read db: %v", err)
-	}
-	myVideos := []*video{}
-	err = json.Unmarshal(b, &myVideos)
-	if err != nil {
-		log.Fatalf("Couldnt decode db: %v", err)
-	}
-	videos = myVideos
-}
-
 type conf struct {
-	Env     string
-	Address string
-	Auth    authConf
+	SSL     bool     `json:"ssl"`
+	Address string   `json:"address"`
+	Auth    authConf `json:"auth"`
 }
 
 type authConf struct {
@@ -108,56 +76,14 @@ type oktaConf struct {
 	idps        []map[string]interface{} `json:"idps"`
 }
 
-var config = conf{}
-
 func loadConfig() {
 	b, err := ioutil.ReadFile("config.json")
 	if err != nil {
 		log.Fatalf("couldnt read config: %v", err)
 	}
-	myVotes := []*vote{}
 	err = json.Unmarshal(b, &config)
 	if err != nil {
 		log.Fatalf("Couldnt decode config: %v", err)
-	}
-	votes = myVotes
-}
-
-func loadVotes() {
-	lock.Lock()
-	defer lock.Unlock()
-	b, err := ioutil.ReadFile("votes.json")
-	if err != nil {
-		if os.IsNotExist(err) {
-			videos = initVideos
-			return
-		}
-		log.Fatalf("couldnt read db: %v", err)
-	}
-	myVotes := []*vote{}
-	err = json.Unmarshal(b, &myVotes)
-	if err != nil {
-		log.Fatalf("Couldnt decode db: %v", err)
-	}
-	votes = myVotes
-}
-func writeVideos() {
-	lock.Lock()
-	defer lock.Unlock()
-	b, _ := json.MarshalIndent(videos, "", "  ")
-	err := ioutil.WriteFile("videos.json", b, 0644)
-	if err != nil {
-		log.Fatalf("Couldnt write db: %v", err)
-	}
-}
-
-func writeVotes() {
-	lock.Lock()
-	defer lock.Unlock()
-	b, _ := json.MarshalIndent(votes, "", "  ")
-	err := ioutil.WriteFile("votes.json", b, 0644)
-	if err != nil {
-		log.Fatalf("Couldnt write db: %v", err)
 	}
 }
 
@@ -211,20 +137,17 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		//		myVote.PersonID = claims[""]
-		lock.Lock()
 		found := false
 		newVotes := []*vote{}
-		for _, v := range votes {
+		for _, v := range getVotes() {
 			if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
 				found = true
 			} else {
 				newVotes = append(newVotes, v)
 			}
 		}
-		votes = newVotes
-		lock.Unlock()
 		if found {
-			writeVotes()
+			writeVotes(newVotes)
 			log.Printf("Updated: %+v", myVote)
 		}
 	case http.MethodPost:
@@ -238,8 +161,8 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		//		myVote.PersonID = claims[""]
-		lock.Lock()
 		found := false
+		votes := getVotes()
 		for _, v := range votes {
 			if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
 				v.Up = myVote.Up
@@ -249,12 +172,9 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 		if !found {
 			votes = append(votes, myVote)
 		}
-		lock.Unlock()
-		writeVotes()
+		writeVotes(votes)
 		log.Printf("Updated: %+v", myVote)
 	}
-	lock.RLock()
-	defer lock.RUnlock()
 	b, _ := json.Marshal(votes)
 	w.Write(b)
 	log.Printf("Returned: %+v", votes)
@@ -304,14 +224,10 @@ func videosHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Couldnt decode: %v", err)
 			return
 		}
-		lock.Lock()
-		videos = myVideos
-		lock.Unlock()
-		writeVideos()
+		writeVideos(myVideos)
 		log.Printf("Updated: %+v", myVideos)
 	}
-	lock.RLock()
-	defer lock.RUnlock()
+	videos := getVideos()
 	b, _ := json.Marshal(videos)
 	w.Write(b)
 	log.Printf("Returned: %+v", videos)
