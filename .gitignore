@@ -1,3 +1,4 @@
 *.json
 .tern-port
 voteo
+nohup.out
