@@ -5,6 +5,7 @@ const hideOkta = () => {
 };
 
 const renderOktaSignIn = () => {
+  document.getElementById('widget-container').style.display = 'none';
   state.oktaSignIn.renderEl({ el: '#widget-container' }, res => {
     if (res.status === 'SUCCESS') {
       console.log('signin success', res);
@@ -22,20 +23,22 @@ const renderOktaSignIn = () => {
       getVotes();
     }
   });
+  state.oktaSignIn.hide();
+  document.getElementById('widget-container').style.display = 'block';
 };
 
 const doOkta = () => {
   document.getElementById('sign-out').addEventListener('click', event => {
     event.preventDefault();
-
     console.log('signout clicked');
     state.oktaSignIn.session.close(err => {
       if (err) {
         alert(`Error: ${err}`);
       }
-      showSignIn();
+      showSignInButton();
     });
   });
+  renderOktaSignIn();
   state.oktaSignIn.session.get(async res => {
     if (res.status === 'ACTIVE') {
       console.log('login already active', res);
@@ -44,11 +47,12 @@ const doOkta = () => {
         'access_token'
       ).accessToken;
       showSignOut();
-      getVideos();
-      getVotes();
     } else {
       console.log('not signed in');
-      showSignIn();
+      showSignInButton();
     }
+    // get (with auth as appropriate - or otherwise)
+    getVideos();
+    getVotes();
   });
 };

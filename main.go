@@ -31,6 +31,7 @@ func main() {
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/yt/data", ytDataHandler)
 	http.HandleFunc("/auth/settings", authInfoHandler)
+	http.HandleFunc("/register", registrationHandler)
 	loadConfig()
 	db.loadVideos()
 	db.loadVotes()
@@ -88,88 +89,92 @@ func loadConfig() {
 }
 
 func voteHandler(w http.ResponseWriter, r *http.Request) {
-	h := r.Header.Get("Authorization")
-	if !strings.HasPrefix(h, bearerStr) {
-		w.WriteHeader(http.StatusUnauthorized)
-		log.Printf("No auth header: [%s]", h)
-		return
-	}
-	tokenStr := h[len(bearerStr):]
-	tok, err := verifyToken(tokenStr)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		log.Printf("Verification failure: %v", err)
-		return
-	}
-	claims := tok.Claims
-	log.Printf("claims: %v", claims)
 
-	var personID string
-	personIDI, ok := claims["sub"]
-	if ok {
-		personID, ok = personIDI.(string)
-	}
+	var personID = "unknown"
 	switch r.Method {
 	case http.MethodGet:
-		// just get all
-	case http.MethodDelete:
-		// delete a vote
-		// replace with received blob
-		myVote := &vote{}
-		d := json.NewDecoder(r.Body)
-		err = d.Decode(myVote)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			log.Printf("Couldnt decode: %v", err)
+		// no auth needed
+	default:
+		h := r.Header.Get("Authorization")
+		if !strings.HasPrefix(h, bearerStr) {
+			respond(w, http.StatusUnauthorized)
+			log.Printf("No auth header: [%s]", h)
 			return
 		}
-		hash := sha256.New()
-		hash.Write([]byte(personID))
-		myVote.PersonHash = fmt.Sprintf("%x", hash.Sum(nil))
-		found := false
-		newVotes := []*vote{}
-		for _, v := range db.getVotes() {
-			if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
-				found = true
-			} else {
-				newVotes = append(newVotes, v)
-			}
+		tokenStr := h[len(bearerStr):]
+		tok, err := verifyToken(tokenStr)
+		if err != nil {
+			respond(w, http.StatusUnauthorized)
+			log.Printf("Verification failure: %v", err)
+			return
 		}
-		if found {
-			db.writeVotes(newVotes)
+		claims := tok.Claims
+		log.Printf("claims: %v", claims)
+
+		personIDI, ok := claims["sub"]
+		if ok {
+			personID, ok = personIDI.(string)
+		}
+		switch r.Method {
+		case http.MethodDelete:
+			// delete a vote
+			// replace with received blob
+			myVote := &vote{}
+			d := json.NewDecoder(r.Body)
+			err = d.Decode(myVote)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				log.Printf("Couldnt decode: %v", err)
+				return
+			}
+			hash := sha256.New()
+			hash.Write([]byte(personID))
+			myVote.PersonHash = fmt.Sprintf("%x", hash.Sum(nil))
+			found := false
+			newVotes := []*vote{}
+			for _, v := range db.getVotes() {
+				if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
+					found = true
+				} else {
+					newVotes = append(newVotes, v)
+				}
+			}
+			if found {
+				db.writeVotes(newVotes)
+				log.Printf("Updated: %+v", myVote)
+			}
+		case http.MethodPost:
+			// replace with received blob
+			myVote := &vote{}
+			d := json.NewDecoder(r.Body)
+			err = d.Decode(myVote)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				log.Printf("Couldnt decode: %v", err)
+				return
+			}
+			found := false
+			myVotes := db.getVotes()
+			for _, v := range myVotes {
+				if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
+					v.Up = myVote.Up
+					found = true
+				}
+			}
+			if !found {
+				myVotes = append(myVotes, myVote)
+			}
+			db.writeVotes(myVotes)
 			log.Printf("Updated: %+v", myVote)
 		}
-	case http.MethodPost:
-		// replace with received blob
-		myVote := &vote{}
-		d := json.NewDecoder(r.Body)
-		err = d.Decode(myVote)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			log.Printf("Couldnt decode: %v", err)
-			return
-		}
-		found := false
-		myVotes := db.getVotes()
-		for _, v := range myVotes {
-			if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
-				v.Up = myVote.Up
-				found = true
-			}
-		}
-		if !found {
-			myVotes = append(myVotes, myVote)
-		}
-		db.writeVotes(myVotes)
-		log.Printf("Updated: %+v", myVote)
 	}
 	votes := db.getVotes()
-	b, _ := json.Marshal(votes)
 	for _, vote := range votes {
-		if vote.PersonID != personID {
+		if personID == "unknown" || vote.PersonID != personID {
 			vote.PersonID = ""
 		}
 	}
+	b, _ := json.Marshal(votes)
 	w.Write(b)
 	log.Printf("Returned: %+v", votes)
 }
@@ -177,38 +182,41 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 const bearerStr = "Bearer "
 
 func videosHandler(w http.ResponseWriter, r *http.Request) {
-	h := r.Header.Get("Authorization")
-	if !strings.HasPrefix(h, bearerStr) {
-		w.WriteHeader(http.StatusUnauthorized)
-		log.Printf("No auth header: [%s]", h)
-		return
-	}
-	tokenStr := h[len(bearerStr):]
-	tok, err := verifyToken(tokenStr)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		log.Printf("Verification failure: %v", err)
-		return
-	}
-	claims := tok.Claims
-	log.Printf("claims: %s", claims)
 	switch r.Method {
 	case http.MethodGet:
-		// just get all
-	case http.MethodPost:
-		// apply a vote
-	case http.MethodPut:
-		// replace with received blob
-		myVideos := []*video{}
-		d := json.NewDecoder(r.Body)
-		err := d.Decode(&myVideos)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			log.Printf("Couldnt decode: %v", err)
+		// no auth required ...
+	default:
+		h := r.Header.Get("Authorization")
+		if !strings.HasPrefix(h, bearerStr) {
+			log.Printf("No auth header: [%s]", h)
+			respond(w, http.StatusUnauthorized)
 			return
 		}
-		db.writeVideos(myVideos)
-		log.Printf("Updated: %+v", myVideos)
+		tokenStr := h[len(bearerStr):]
+		tok, err := verifyToken(tokenStr)
+		if err != nil {
+			log.Printf("Verification failure: %v", err)
+			respond(w, http.StatusUnauthorized)
+			return
+		}
+		claims := tok.Claims
+		log.Printf("claims: %s", claims)
+		switch r.Method {
+		case http.MethodPost:
+			// apply a vote
+		case http.MethodPut:
+			// replace with received blob
+			myVideos := []*video{}
+			d := json.NewDecoder(r.Body)
+			err := d.Decode(&myVideos)
+			if err != nil {
+				log.Printf("Couldnt decode: %v", err)
+				respond(w, http.StatusBadRequest)
+				return
+			}
+			db.writeVideos(myVideos)
+			log.Printf("Updated: %+v", myVideos)
+		}
 	}
 	videos := db.getVideos()
 	b, _ := json.Marshal(videos)
@@ -216,11 +224,17 @@ func videosHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Returned: %+v", videos)
 }
 
+func respond(w http.ResponseWriter, statusCode int) {
+	w.WriteHeader(statusCode)
+	b, _ := json.Marshal(`{ "error": "` + http.StatusText(statusCode) + `" }`)
+	w.Write(b)
+}
+
 func ytDataHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		// no video id
-		w.WriteHeader(http.StatusBadRequest)
+		respond(w, http.StatusBadRequest)
 		log.Printf("No video ID")
 		return
 	}
@@ -228,7 +242,7 @@ func ytDataHandler(w http.ResponseWriter, r *http.Request) {
 	resp, err := http.Get(url)
 	if err != nil {
 		// could not connect
-		w.WriteHeader(http.StatusInternalServerError)
+		respond(w, http.StatusInternalServerError)
 		log.Printf("Could not fetch metadata: %s", err)
 		return
 	}

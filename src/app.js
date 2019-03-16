@@ -56,21 +56,22 @@ const items = id => {
           i.id
         )} votes)</div>
     <div>` +
-        (haveIUpvoted(i.id)
-          ? `<img src="https://img.icons8.com/material/24/000000/undo.png" onclick="unvote('${
-              i.id
-            }')" />`
-          : `
-    <img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${
-      i.id
-    }')" />`) +
-        (haveIDownvoted(i.id)
-          ? `<img src="https://img.icons8.com/material/24/000000/undo.png" onclick="unvote('${
-              i.id
-            }')" />`
-          : `<img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${
-              i.id
-            }')" /> `) +
+        (state.personId
+          ? (haveIUpvoted(i.id)
+              ? `<img src="https://img.icons8.com/material/24/000000/undo.png" onclick="unvote('${
+                  i.id
+                }')" />`
+              : `<img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${
+                  i.id
+                }')" />`) +
+            (haveIDownvoted(i.id)
+              ? `<img src="https://img.icons8.com/material/24/000000/undo.png" onclick="unvote('${
+                  i.id
+                }')" />`
+              : `<img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${
+                  i.id
+                }')" /> `)
+          : `<abbr title='log in to vote'><img src="https://img.icons8.com/material/24/000000/question.png" onclick="alert('log in to vote')"></abbr>`) +
         `</div>
     </div></li>`
     )
@@ -86,9 +87,12 @@ const show = i => {
   if (!i) {
     return;
   }
-  document
-    .getElementById('player')
-    .setAttribute('src', 'https://www.youtube.com/embed/' + i);
+  const link = 'https://www.youtube.com/embed/' + i;
+  const player = document.getElementById('player');
+  if (player.getAttribute('src') == link) {
+    return; // no need to refresh
+  }
+  player.setAttribute('src', link);
   const item = state.items.find(item => item.id === i);
   let title = 'preview';
   if (item) {
@@ -178,6 +182,10 @@ const cleanInput = input => {
 };
 
 const putVideos = () => {
+  if (!state.personId) {
+    alert('Please log in or register to add videos');
+    return;
+  }
   fetch(`/videos`, {
     method: 'PUT',
     cache: 'no-cache',
@@ -191,13 +199,18 @@ const putVideos = () => {
   })
     .then(function(response) {
       console.log(response);
-      return response.json();
+      if (response.ok) {
+        return response.json();
+      } else {
+        throw Error(`Request rejected with status ${response.status}`);
+      }
     })
     .then(function(json) {
       console.log(json);
       state.items = json;
       reflop();
-    });
+    })
+    .catch(console.error);
 };
 
 const postVote = vote => {
@@ -278,7 +291,6 @@ const add = () => {
 
 const reflop = async () => {
   var t0 = performance.now();
-  document.getElementById('logged-in').style.display = 'block';
   const vidList = document.getElementById('videoList');
   if (vidList) {
     vidList.innerHTML = items();
@@ -293,20 +305,29 @@ const reflop = async () => {
 const showSignOut = () => {
   console.log('show signout');
   hideOkta();
+  document.getElementById('app-container').style.display = 'block';
   document.getElementById('name').innerHTML = state.personId;
-  document.getElementById('logged-in').style.display = 'block';
+  document.getElementById('logged-in').style.display = 'flex';
+  document.getElementById('logged-out').style.display = 'none';
 };
 
-const showSignIn = () => {
-  console.log('show signin');
+const showSignInButton = () => {
+  console.log('show signin button');
+  hideOkta();
+  document.getElementById('app-container').style.display = 'block';
+  document.getElementById('name').innerHTML = '';
   document.getElementById('logged-in').style.display = 'none';
+  document.getElementById('logged-out').style.display = 'flex';
+};
+
+const showSignInModal = () => {
+  console.log('show signin modal');
   if (state.oktaSignIn) {
-    renderOktaSignIn();
+    document.getElementById('app-container').style.display = 'none';
+
+    state.oktaSignIn.show();
   } else {
-    state.personId = res[0].claims.email;
-    showSignOut();
-    getVideos();
-    getVotes();
+    console.log('oops: non-okta signin not implemented');
   }
 };
 
@@ -324,7 +345,7 @@ const start = () => {
         state.oktaSignIn = new OktaSignIn(json.okta);
         doOkta();
       } else {
-        state.personId = 'unknown';
+        state.personId = '';
         // assume it's no-login
         getVideos();
         getVotes();

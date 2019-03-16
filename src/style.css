@@ -58,14 +58,22 @@ ul.list img {
   cursor: pointer;
 }
 
-#logged-in-inner {
+#nav {
   max-width: 992px;
   width: 100%;
   max-width: 992px;
   margin: 0 auto;
 }
 
-ul.logged-in { 
+div.loggedout { 
+ display: flex;
+ height: auto;
+ background: rgb(78, 195, 189);
+ border-radius: 0.5rem;
+ padding: 0px;
+}
+
+#nav ul { 
  display: flex;
  text-align: center; 
  list-style: none;
@@ -73,8 +81,22 @@ ul.logged-in {
  padding: 5px;
  justify-content: space-between; 
  border-radius: 0.5rem;
+ flex-grow: 1;
+ margin: 0px;
 }
-ul.logged-in li { 
+
+#nav ul.right { 
+ display: flex;
+ text-align: center; 
+ list-style: none;
+ background: rgb(78, 195, 189);
+ padding: 5px;
+ justify-content: flex-end; 
+ border-radius: 0.5rem;
+ flex-grow: 0;
+}
+
+#nav ul li { 
   display: inline-block;
   padding: 9px;
   justify-content: space-between; 
@@ -82,10 +104,18 @@ ul.logged-in li {
   font-weight: bold;
 }
 
-ul.logged-in li.button {
+#nav ul li.button {
   background-color: #f0f0f0;
+  display: flex;
+  justify-content: space-between; 
+  margin-left: 5px;
 }
-ul.logged-in li a {
+
+#nav ul li div {
+  display: inline-block;
+  padding: 1px;
+}
+#nav ul li a {
   text-decoration: none;
 }
 
