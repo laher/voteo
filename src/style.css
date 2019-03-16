@@ -261,3 +261,14 @@ svg {
 iframe {
   border:1px solid lightgrey;
 }
+
+#okta-sign-in {
+    margin-top: 10px;
+}
+
+@media only screen and (max-height:750px) {
+ #okta-sign-in {
+    margin-top: 10px;
+    padding-top: 10px;
+ }
+}
