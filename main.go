@@ -29,7 +29,7 @@ func main() {
 	http.Handle("/", fs)
 	http.HandleFunc("/videos", videosHandler)
 	http.HandleFunc("/vote", voteHandler)
-	http.HandleFunc("/yt/data", ytDataHandler)
+	http.HandleFunc("/yt/data", ytMetadataProxy)
 	http.HandleFunc("/auth/settings", authInfoHandler)
 	http.HandleFunc("/register", registrationHandler)
 	loadConfig()
@@ -230,7 +230,7 @@ func respond(w http.ResponseWriter, statusCode int) {
 	w.Write(b)
 }
 
-func ytDataHandler(w http.ResponseWriter, r *http.Request) {
+func ytMetadataProxy(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		// no video id
