@@ -1,4 +1,12 @@
-const hideOkta = () => {
+import {
+  state,
+  showSignInButton,
+  showSignOut,
+  getVotes,
+  getVideos,
+} from './app.js';
+
+export const hideOkta = () => {
   if (state.oktaSignIn) {
     state.oktaSignIn.hide();
   }
@@ -27,7 +35,7 @@ const renderOktaSignIn = () => {
   document.getElementById('widget-container').style.display = 'block';
 };
 
-const doOkta = () => {
+export const doOkta = () => {
   document.getElementById('sign-out').addEventListener('click', event => {
     event.preventDefault();
     console.log('signout clicked');

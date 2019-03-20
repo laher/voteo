@@ -1,6 +1,8 @@
 'use strict';
 
-let state = {
+import { doOkta, hideOkta } from './auth-okta.js';
+
+export let state = {
   personId: null,
   items: [
     { id: 'X7hFERntlog', title: 'Fearless Org' },
@@ -14,7 +16,7 @@ let state = {
   oktaSignIn: null,
 };
 
-const countVotes = id => {
+export const countVotes = id => {
   return (
     state.votes.filter(vote => vote.videoId == id && vote.up).length -
     state.votes.filter(vote => vote.videoId == id && !vote.up).length
@@ -135,7 +137,7 @@ const downvote = i => {
   postVote(vote);
 };
 
-const getVideos = () => {
+export const getVideos = () => {
   fetch(`/videos`, {
     method: 'get',
     cache: 'no-cache',
@@ -154,7 +156,7 @@ const getVideos = () => {
     });
 };
 
-const getVotes = () => {
+export const getVotes = () => {
   fetch(`/vote`, {
     method: 'get',
     cache: 'no-cache',
@@ -302,7 +304,7 @@ const reflop = async () => {
   console.log('Call to reflop took ' + (t1 - t0) + ' milliseconds.');
 };
 
-const showSignOut = () => {
+export const showSignOut = () => {
   console.log('show signout');
   hideOkta();
   document.getElementById('app-container').style.display = 'block';
@@ -311,7 +313,7 @@ const showSignOut = () => {
   document.getElementById('logged-out').style.display = 'none';
 };
 
-const showSignInButton = () => {
+export const showSignInButton = () => {
   console.log('show signin button');
   hideOkta();
   document.getElementById('app-container').style.display = 'block';
