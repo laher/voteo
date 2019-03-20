@@ -35,22 +35,22 @@ body {
 }
 
 .table {
-  display: table;   /* Allow the centering to work */
+  display: table; /* Allow the centering to work */
   margin: 0 auto;
 }
 
-ul.nav { 
-  text-align: center; 
+ul.nav {
+  text-align: center;
   min-width: 696px;
   list-style: none;
 }
 
-ul.nav li { 
-  display: inline-block; 
+ul.nav li {
+  display: inline-block;
   padding: 5px;
 }
 
-ul.list { 
+ul.list {
   list-style: none;
 }
 
@@ -65,41 +65,41 @@ ul.list img {
   margin: 0 auto;
 }
 
-div.loggedout { 
- display: flex;
- height: auto;
- background: rgb(78, 195, 189);
- border-radius: 0.5rem;
- padding: 0px;
+div.loggedout {
+  display: flex;
+  height: auto;
+  background: rgb(78, 195, 189);
+  border-radius: 0.5rem;
+  padding: 0px;
 }
 
-#nav ul { 
- display: flex;
- text-align: center; 
- list-style: none;
- background: rgb(78, 195, 189);
- padding: 5px;
- justify-content: space-between; 
- border-radius: 0.5rem;
- flex-grow: 1;
- margin: 0px;
+#nav ul {
+  display: flex;
+  text-align: center;
+  list-style: none;
+  background: rgb(78, 195, 189);
+  padding: 5px;
+  justify-content: space-between;
+  border-radius: 0.5rem;
+  flex-grow: 1;
+  margin: 0px;
 }
 
-#nav ul.right { 
- display: flex;
- text-align: center; 
- list-style: none;
- background: rgb(78, 195, 189);
- padding: 5px;
- justify-content: flex-end; 
- border-radius: 0.5rem;
- flex-grow: 0;
+#nav ul.right {
+  display: flex;
+  text-align: center;
+  list-style: none;
+  background: rgb(78, 195, 189);
+  padding: 5px;
+  justify-content: flex-end;
+  border-radius: 0.5rem;
+  flex-grow: 0;
 }
 
-#nav ul li { 
+#nav ul li {
   display: inline-block;
   padding: 9px;
-  justify-content: space-between; 
+  justify-content: space-between;
   border-radius: 0.5rem;
   font-weight: bold;
 }
@@ -107,7 +107,7 @@ div.loggedout {
 #nav ul li.button {
   background-color: #f0f0f0;
   display: flex;
-  justify-content: space-between; 
+  justify-content: space-between;
   margin-left: 5px;
 }
 
@@ -119,22 +119,21 @@ div.loggedout {
   text-decoration: none;
 }
 
-ul.list li { 
+ul.list li {
   padding-top: 10px;
   border-bottom: 1px solid gray;
   width: 96%;
 }
 
 ul.list li div {
-  display: flex; 
+  display: flex;
   justify-content: space-between;
 }
 
 div.new-item-form {
-  display: flex; 
+  display: flex;
   justify-content: space-between;
 }
-
 
 a {
   color: inherit;
@@ -146,30 +145,32 @@ a:hover {
   /*  color: var(--accent-color); */
 }
 
-
-
 pre {
   font-size: 0.85rem;
 }
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   background-color: transparent;
   border: none;
   color: inherit;
 }
 
-
-button:focus, input:focus, select:focus, textarea:focus {
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
 }
 
-
-input[type="email"],
-input[type="number"],
-input[type="search"],
-input[type="text"],
-input[type="tel"],
-input[type="url"],
-input[type="password"] {
+input[type='email'],
+input[type='number'],
+input[type='search'],
+input[type='text'],
+input[type='tel'],
+input[type='url'],
+input[type='password'] {
   width: 70%;
   padding: 0.5rem 1rem;
   background-color: #ffffff;
@@ -204,9 +205,8 @@ svg {
   color: var(--background-color); */
 }
 
-
 #name {
- flex-grow: 0;
+  flex-grow: 0;
 }
 
 .card {
@@ -219,9 +219,9 @@ svg {
 }
 
 .card > * {
- padding-right: 10px;
- padding-left: 10px;
- flex: 1 100%;
+  padding-right: 10px;
+  padding-left: 10px;
+  flex: 1 100%;
 }
 
 .card .top {
@@ -254,21 +254,22 @@ svg {
     flex-direction: column;
   }
 
-  .card .left, .card .right {
+  .card .left,
+  .card .right {
     width: 100%;
   }
 }
 iframe {
-  border:1px solid lightgrey;
+  border: 1px solid lightgrey;
 }
 
 #okta-sign-in {
-    margin-top: 10px;
+  margin-top: 10px;
 }
 
-@media only screen and (max-height:750px) {
- #okta-sign-in {
+@media only screen and (max-height: 750px) {
+  #okta-sign-in {
     margin-top: 10px;
     padding-top: 10px;
- }
+  }
 }

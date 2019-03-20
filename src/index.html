@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge,chrome=1">
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge,chrome=1" />
 
     <title>Voteo</title>
-    <meta name="description" content="Video voting app">
+    <meta name="description" content="Video voting app" />
 
-    <link rel="stylesheet" type="text/css" href="style.css">
-    <link rel="home" href="https://laher.github.io/voteo/">
-    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
-    <link rel="icon" type="image/png" href="./assets/favicon.png">
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="home" href="https://laher.github.io/voteo/" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1"
+    />
+    <link rel="icon" type="image/png" href="./assets/favicon.png" />
     <link rel="canonical" href="https://github.com/laher/voteo" />
-
 
     <!-- Open graph -->
     <meta property="og:title" content="Voteo" />
@@ -27,55 +29,77 @@
     <meta property="og:image:alt" content="Voteo" />
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" value="summary">
-    <meta name="twitter:url" content="https://laher.github.io/voteo/">
-    <meta name="twitter:title" content="Voteo">
+    <meta name="twitter:card" value="summary" />
+    <meta name="twitter:url" content="https://laher.github.io/voteo/" />
+    <meta name="twitter:title" content="Voteo" />
 
     <!-- Android web app -->
-    <link rel="manifest" href="./manifest.webmanifest">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#323232">
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#323232" />
 
     <!-- IOS web app -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="#323232">
-    <meta name="apple-mobile-web-app-title" content="Voteo">
-    <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-512x512.png">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="#323232" />
+    <meta name="apple-mobile-web-app-title" content="Voteo" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="./assets/icon-512x512.png"
+    />
 
     <!-- Windows web app -->
-    <meta name="msapplication-TileImage" content="./assets/icon-512x512.png">
-    <meta name="msapplication-TileColor" content="#323232">
+    <meta name="msapplication-TileImage" content="./assets/icon-512x512.png" />
+    <meta name="msapplication-TileColor" content="#323232" />
 
     <script defer src="app.js"></script>
     <script defer src="auth-okta.js"></script>
-    <script src="https://ok1static.oktacdn.com/assets/js/sdk/okta-auth-js/2.0.1/okta-auth-js.min.js" type="text/javascript"></script>
-    <script src="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/2.6.0/js/okta-sign-in.min.js" type="text/javascript"></script>
-    <link href="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/2.6.0/css/okta-sign-in.min.css" type="text/css" rel="stylesheet"/>
+    <script
+      src="https://ok1static.oktacdn.com/assets/js/sdk/okta-auth-js/2.0.1/okta-auth-js.min.js"
+      type="text/javascript"
+    ></script>
+    <script
+      src="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/2.6.0/js/okta-sign-in.min.js"
+      type="text/javascript"
+    ></script>
+    <link
+      href="https://ok1static.oktacdn.com/assets/js/sdk/okta-signin-widget/2.6.0/css/okta-sign-in.min.css"
+      type="text/css"
+      rel="stylesheet"
+    />
   </head>
   <body>
-
-
     <div>
       <div id="nav">
-        <ul id='logged-in' style='display:none'>
-          <li><abbr title='Voteo is a video voting app for teams'>Voteo</abbr></li>
+        <ul id="logged-in" style="display:none">
+          <li>
+            <abbr title="Voteo is a video voting app for teams">Voteo</abbr>
+          </li>
           <li id="name"></li>
-          <li class="button"><a href="#" id="sign-out" class="">Sign out</a></li>
-        </ul>
-        <div id='logged-out' class='loggedout'>
-        <ul>
-          <li><abbr title='Voteo is a video voting app for teams'>Voteo</abbr></li>
-          <li>guest</li>
-          <li> </li>
-        </ul>
-        <ul class='right'>
-          <li class='button'>
-              <a href="/register" target="_blank" id="register" class="">Register</a>
-          </li>
           <li class="button">
-              <a href="#" onclick='showSignInModal();' id="sign-in" class="">Sign in</a>
+            <a href="#" id="sign-out" class="">Sign out</a>
           </li>
         </ul>
+        <div id="logged-out" class="loggedout">
+          <ul>
+            <li>
+              <abbr title="Voteo is a video voting app for teams">Voteo</abbr>
+            </li>
+            <li>guest</li>
+            <li></li>
+          </ul>
+          <ul class="right">
+            <li class="button">
+              <a href="/register" target="_blank" id="register" class=""
+                >Register</a
+              >
+            </li>
+            <li class="button">
+              <a href="#" onclick="showSignInModal();" id="sign-in" class=""
+                >Sign in</a
+              >
+            </li>
+          </ul>
         </div>
       </div>
       <div id="widget-container"></div>
@@ -84,13 +108,20 @@
           <div class="left">
             <h3>Add a video</h3>
             <div class="video-list">
-              <div class="new-item-form" >
-                <input id="addbox" type="text" placeholder="Drop a youtube video id or url here ..." onchange="preview()" />
+              <div class="new-item-form">
+                <input
+                  id="addbox"
+                  type="text"
+                  placeholder="Drop a youtube video id or url here ..."
+                  onchange="preview()"
+                />
                 <!--
                   <img src="https://img.icons8.com/material/24/000000/preview-pane.png">
                 -->
                 <button onclick="add()">
-                  <img src="https://img.icons8.com/material/24/000000/plus.png">
+                  <img
+                    src="https://img.icons8.com/material/24/000000/plus.png"
+                  />
                 </button>
               </div>
               <h3>
@@ -106,12 +137,17 @@
             <h3>Watch</h3>
             <p id="title"></p>
             <div>
-              <iframe id="player" width="420" height="315" src="" allowfullscreen />
+              <iframe
+                id="player"
+                width="420"
+                height="315"
+                src=""
+                allowfullscreen
+              />
             </div>
           </div>
         </div>
       </div>
     </div>
-
   </body>
 </html>
