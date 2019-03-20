@@ -1,15 +1,24 @@
-import {
-  state,
-  showSignInButton,
-  showSignOut,
-  getVotes,
-  getVideos,
-} from './app.js';
+import { showSignInOut, reFetch } from './app.js';
+
+let state = {
+  personId: null,
+  idToken: null,
+  accessToken: null,
+  oktaSignIn: null,
+};
 
 export const hideOkta = () => {
   if (state.oktaSignIn) {
     state.oktaSignIn.hide();
   }
+};
+
+export const getAccessToken = () => {
+  return state.accessToken;
+};
+
+export const getPersonId = () => {
+  return state.personId;
 };
 
 const renderOktaSignIn = () => {
@@ -26,24 +35,37 @@ const renderOktaSignIn = () => {
         state.oktaSignIn.tokenManager
       );
       state.personId = res[0].claims.email;
-      showSignOut();
-      getVideos();
-      getVotes();
+      hideOkta();
+      showSignInOut(state.personId);
+      reFetch();
     }
   });
   state.oktaSignIn.hide();
   document.getElementById('widget-container').style.display = 'block';
 };
 
-export const doOkta = () => {
+export const showSignInModal = () => {
+  console.log('show signin modal');
+  if (state.oktaSignIn) {
+    document.getElementById('app-container').style.display = 'none';
+    state.oktaSignIn.show();
+  } else {
+    console.log('oops: non-okta signin not implemented');
+  }
+};
+
+export const initOkta = oktaConf => {
+  state.oktaSignIn = new OktaSignIn(oktaConf);
   document.getElementById('sign-out').addEventListener('click', event => {
     event.preventDefault();
     console.log('signout clicked');
+    state.personId = null;
     state.oktaSignIn.session.close(err => {
       if (err) {
         alert(`Error: ${err}`);
       }
-      showSignInButton();
+      hideOkta();
+      showSignInOut(null);
     });
   });
   renderOktaSignIn();
@@ -54,13 +76,14 @@ export const doOkta = () => {
       state.accessToken = state.oktaSignIn.tokenManager.get(
         'access_token'
       ).accessToken;
-      showSignOut();
+      hideOkta();
+      showSignInOut(state.personId);
     } else {
       console.log('not signed in');
-      showSignInButton();
+      hideOkta();
+      showSignInOut(null);
     }
     // get (with auth as appropriate - or otherwise)
-    getVideos();
-    getVotes();
+    reFetch();
   });
 };

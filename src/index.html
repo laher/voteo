@@ -52,8 +52,16 @@
     <meta name="msapplication-TileImage" content="./assets/icon-512x512.png" />
     <meta name="msapplication-TileColor" content="#323232" />
 
-    <script type="module" src="app.js"></script>
-    <script type="module" src="auth-okta.js"></script>
+    <!-- this style seems appropriate for the main 'app' -->
+    <script type="module" src="./app.js"></script>
+    <!-- second style seems appropriate for a 'library' -->
+    <script type="module">
+      import { showSignInModal } from './auth-okta.js';
+      document.getElementById('sign-in').addEventListener('click', event => {
+        event.preventDefault();
+        showSignInModal();
+      });
+    </script>
     <script
       src="https://ok1static.oktacdn.com/assets/js/sdk/okta-auth-js/2.0.1/okta-auth-js.min.js"
       type="text/javascript"
@@ -95,9 +103,7 @@
               >
             </li>
             <li class="button">
-              <a href="#" onclick="showSignInModal();" id="sign-in" class=""
-                >Sign in</a
-              >
+              <a href="#" id="sign-in" class="">Sign in</a>
             </li>
           </ul>
         </div>
@@ -115,10 +121,7 @@
                   placeholder="Drop a youtube video id or url here ..."
                   onchange="preview()"
                 />
-                <!--
-                  <img src="https://img.icons8.com/material/24/000000/preview-pane.png">
-                -->
-                <button onclick="add()">
+                <button id="add" onclick="add()">
                   <img
                     src="https://img.icons8.com/material/24/000000/plus.png"
                   />

@@ -1,9 +1,8 @@
 'use strict';
 
-import { doOkta, hideOkta } from './auth-okta.js';
+import { initOkta, getAccessToken, getPersonId } from './auth-okta.js';
 
-export let state = {
-  personId: null,
+let state = {
   items: [
     { id: 'X7hFERntlog', title: 'Fearless Org' },
     { id: 'd_HHnEROy_w', title: 'Stop managing' },
@@ -11,9 +10,6 @@ export let state = {
   ],
   votes: [{ videoId: 'x7hFERntlog', personId: 'am', up: true }],
   selectedItem: 'X7hFERntlog',
-  idToken: null,
-  accessToken: null,
-  oktaSignIn: null,
 };
 
 export const countVotes = id => {
@@ -26,7 +22,7 @@ export const countVotes = id => {
 const haveIUpvoted = id => {
   return (
     state.votes.filter(
-      vote => vote.videoId == id && vote.up && vote.personId == state.personId
+      vote => vote.videoId == id && vote.up && vote.personId == getPersonId()
     ).length > 0
   );
 };
@@ -34,7 +30,7 @@ const haveIUpvoted = id => {
 const haveIDownvoted = id => {
   return (
     state.votes.filter(
-      vote => vote.videoId == id && !vote.up && vote.personId == state.personId
+      vote => vote.videoId == id && !vote.up && vote.personId == getPersonId()
     ).length > 0
   );
 };
@@ -42,7 +38,7 @@ const haveIDownvoted = id => {
 const haveIVoted = id => {
   return (
     state.votes.filter(
-      vote => vote.videoId == id && vote.personId == state.personId
+      vote => vote.videoId == id && vote.personId == getPersonId()
     ).length > 0
   );
 };
@@ -58,7 +54,7 @@ const items = id => {
           i.id
         )} votes)</div>
     <div>` +
-        (state.personId
+        (getPersonId()
           ? (haveIUpvoted(i.id)
               ? `<img src="https://img.icons8.com/material/24/000000/undo.png" onclick="unvote('${
                   i.id
@@ -80,7 +76,7 @@ const items = id => {
     .join('');
 };
 
-const setSelectedItem = i => {
+export const setSelectedItem = i => {
   state.selectedItem = i;
   show(i);
 };
@@ -103,46 +99,46 @@ const show = i => {
   document.getElementById('title').innerHTML = title;
 };
 
-const upvote = i => {
+export const upvote = i => {
   const item = state.items.find(item => item.id === i);
   let vote = state.votes.find(
-    vote => vote.personId == state.personId && vote.videoId == i
+    vote => vote.personId == getPersonId() && vote.videoId == i
   );
   if (!vote) {
-    vote = { personId: state.personId, videoId: i };
+    vote = { personId: getPersonId(), videoId: i };
   }
   vote.up = true;
   postVote(vote);
 };
 
-const unvote = i => {
+export const unvote = i => {
   const vote = state.votes.find(
-    vote => vote.personId == state.personId && vote.videoId == i
+    vote => vote.personId == getPersonId() && vote.videoId == i
   );
   if (!vote) {
-    vote = { personId: state.personId, videoId: i };
+    vote = { personId: getPersonId(), videoId: i };
   }
   deleteVote(vote);
 };
 
-const downvote = i => {
+export const downvote = i => {
   const item = state.items.find(item => item.id === i);
   const vote = state.votes.find(
-    vote => vote.personId == state.personId && vote.videoId == i
+    vote => vote.personId == getPersonId() && vote.videoId == i
   );
   if (!vote) {
-    vote = { personId: state.personId, videoId: i };
+    vote = { personId: getPersonId(), videoId: i };
   }
   vote.up = false;
   postVote(vote);
 };
 
-export const getVideos = () => {
+const getVideos = () => {
   fetch(`/videos`, {
     method: 'get',
     cache: 'no-cache',
     headers: {
-      Authorization: 'Bearer ' + state.accessToken,
+      Authorization: 'Bearer ' + getAccessToken(),
     },
   })
     .then(function(response) {
@@ -156,12 +152,17 @@ export const getVideos = () => {
     });
 };
 
-export const getVotes = () => {
+export const reFetch = () => {
+  getVotes();
+  getVideos();
+};
+
+const getVotes = () => {
   fetch(`/vote`, {
     method: 'get',
     cache: 'no-cache',
     headers: {
-      Authorization: 'Bearer ' + state.accessToken,
+      Authorization: 'Bearer ' + getAccessToken(),
     },
   })
     .then(function(response) {
@@ -184,7 +185,7 @@ const cleanInput = input => {
 };
 
 const putVideos = () => {
-  if (!state.personId) {
+  if (!getPersonId()) {
     alert('Please log in or register to add videos');
     return;
   }
@@ -193,7 +194,7 @@ const putVideos = () => {
     cache: 'no-cache',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + state.accessToken,
+      Authorization: 'Bearer ' + getAccessToken(),
     },
     redirect: 'follow', // manual, *follow, error
     referrer: 'no-referrer', // no-referrer, *client
@@ -221,7 +222,7 @@ const postVote = vote => {
     cache: 'no-cache',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + state.accessToken,
+      Authorization: 'Bearer ' + getAccessToken(),
     },
     redirect: 'follow', // manual, *follow, error
     referrer: 'no-referrer', // no-referrer, *client
@@ -244,7 +245,7 @@ const deleteVote = vote => {
     cache: 'no-cache',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + state.accessToken,
+      Authorization: 'Bearer ' + getAccessToken(),
     },
     redirect: 'follow', // manual, *follow, error
     referrer: 'no-referrer', // no-referrer, *client
@@ -261,14 +262,15 @@ const deleteVote = vote => {
     });
 };
 
-const preview = () => {
+export const preview = () => {
   const id = cleanInput(document.getElementById('addbox').value);
   if (id) {
     show(id);
   }
 };
 
-const add = () => {
+export const add = () => {
+  console.log('add');
   const id = cleanInput(document.getElementById('addbox').value);
 
   fetch(`/yt/data?id=${id}`, {
@@ -304,36 +306,27 @@ const reflop = async () => {
   console.log('Call to reflop took ' + (t1 - t0) + ' milliseconds.');
 };
 
-export const showSignOut = () => {
-  console.log('show signout');
-  hideOkta();
+export const showSignInOut = personId => {
   document.getElementById('app-container').style.display = 'block';
-  document.getElementById('name').innerHTML = state.personId;
-  document.getElementById('logged-in').style.display = 'flex';
-  document.getElementById('logged-out').style.display = 'none';
-};
-
-export const showSignInButton = () => {
-  console.log('show signin button');
-  hideOkta();
-  document.getElementById('app-container').style.display = 'block';
-  document.getElementById('name').innerHTML = '';
-  document.getElementById('logged-in').style.display = 'none';
-  document.getElementById('logged-out').style.display = 'flex';
-};
-
-const showSignInModal = () => {
-  console.log('show signin modal');
-  if (state.oktaSignIn) {
-    document.getElementById('app-container').style.display = 'none';
-
-    state.oktaSignIn.show();
+  document.getElementById('name').innerHTML = personId;
+  if (personId) {
+    console.log('show signout');
+    document.getElementById('logged-in').style.display = 'flex';
+    document.getElementById('logged-out').style.display = 'none';
   } else {
-    console.log('oops: non-okta signin not implemented');
+    console.log('show signin button');
+    document.getElementById('logged-in').style.display = 'none';
+    document.getElementById('logged-out').style.display = 'flex';
   }
 };
 
 const start = () => {
+  window.upvote = upvote;
+  window.downvote = downvote;
+  window.unvote = unvote;
+  window.setSelectedItem = setSelectedItem;
+  window.preview = preview;
+  window.add = add;
   fetch(`/auth/settings`, {
     method: 'get',
   })
@@ -343,17 +336,25 @@ const start = () => {
     })
     .then(function(json) {
       console.log(JSON.stringify(json));
+      state.conf = json;
       if (json['type'] == 'okta') {
-        state.oktaSignIn = new OktaSignIn(json.okta);
-        doOkta();
+        initOkta(json.okta);
       } else {
-        state.personId = '';
         // assume it's no-login
-        getVideos();
-        getVotes();
+        reFetch();
       }
     });
 };
 
 // Listen on page load:
 window.addEventListener('load', start);
+/*
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('adding event listeners');
+  document.getElementById('add').addEventListener('click', () => add);
+  document.getElementById('addbox').addEventListener('change', () => preview);
+  document
+    .getElementById('sign-in')
+    .addEventListener('click', () => showSignInModal);
+  console.log('done adding event listeners');
+}); */
