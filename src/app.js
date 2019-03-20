@@ -1,6 +1,7 @@
 'use strict';
 
 import { initOkta, getAccessToken, getPersonId } from './auth-okta.js';
+import { getRender } from './sf.js';
 
 let state = {
   items: [
@@ -19,7 +20,7 @@ export const countVotes = id => {
   );
 };
 
-const haveIUpvoted = id => {
+export const haveIUpvoted = id => {
   return (
     state.votes.filter(
       vote => vote.videoId == id && vote.up && vote.personId == getPersonId()
@@ -27,7 +28,7 @@ const haveIUpvoted = id => {
   );
 };
 
-const haveIDownvoted = id => {
+export const haveIDownvoted = id => {
   return (
     state.votes.filter(
       vote => vote.videoId == id && !vote.up && vote.personId == getPersonId()
@@ -35,7 +36,7 @@ const haveIDownvoted = id => {
   );
 };
 
-const haveIVoted = id => {
+export const haveIVoted = id => {
   return (
     state.votes.filter(
       vote => vote.videoId == id && vote.personId == getPersonId()
@@ -43,7 +44,7 @@ const haveIVoted = id => {
   );
 };
 
-const items = id => {
+const itemsHTML = id => {
   return state.items
     .sort((a, b) => countVotes(b.id) - countVotes(a.id))
     .map(
@@ -112,7 +113,7 @@ export const upvote = i => {
 };
 
 export const unvote = i => {
-  const vote = state.votes.find(
+  let vote = state.votes.find(
     vote => vote.personId == getPersonId() && vote.videoId == i
   );
   if (!vote) {
@@ -123,7 +124,7 @@ export const unvote = i => {
 
 export const downvote = i => {
   const item = state.items.find(item => item.id === i);
-  const vote = state.votes.find(
+  let vote = state.votes.find(
     vote => vote.personId == getPersonId() && vote.videoId == i
   );
   if (!vote) {
@@ -292,12 +293,17 @@ export const add = () => {
       putVideos();
     });
 };
-
+const superfine = false;
 const reflop = async () => {
   var t0 = performance.now();
   const vidList = document.getElementById('videoList');
   if (vidList) {
-    vidList.innerHTML = items();
+    if (superfine) {
+      const render = getRender(vidList);
+      render(state.items);
+    } else {
+      vidList.innerHTML = itemsHTML();
+    }
     document.getElementById('videoCount').innerHTML = state.items.length;
   }
   show(state.selectedItem);
