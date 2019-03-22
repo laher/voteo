@@ -3,12 +3,16 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"text/template"
 
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -25,8 +29,9 @@ var (
 )
 
 func main() {
-	fs := http.FileServer(http.Dir("src"))
-	http.Handle("/", fs)
+	fs := http.FileServer(http.Dir("."))
+	http.Handle("/static/", fs)
+	http.HandleFunc("/", templateHandler)
 	http.HandleFunc("/videos", videosHandler)
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/yt/data", ytMetadataProxy)
@@ -222,6 +227,91 @@ func videosHandler(w http.ResponseWriter, r *http.Request) {
 	b, _ := json.Marshal(videos)
 	w.Write(b)
 	log.Printf("Returned: %+v", videos)
+}
+
+func templateHandler(w http.ResponseWriter, r *http.Request) {
+	personID, err := parseAuth(r.Header.Get("Authorization"))
+	if err != nil {
+		// not logged in
+	}
+	dir := "templates"
+	paths := []string{
+		filepath.Join(dir, "index.tpl"),
+		filepath.Join(dir, "items.tpl"),
+	}
+	tmpl, err := template.New("index.tpl").Funcs(template.FuncMap{
+		"countVotes": func(id string) string {
+			count := 0
+			for _, v := range db.getVotes() {
+				if v.VideoID == id {
+					if v.Up {
+						count++
+					} else {
+						count--
+					}
+				}
+			}
+			return strconv.Itoa(count)
+		},
+		"haveIUpvoted": func(id string) bool {
+			if personID == "" {
+				return false
+			}
+			for _, v := range db.getVotes() {
+				if v.VideoID == id && v.PersonID == personID && v.Up {
+					return true
+				}
+			}
+			return false
+		},
+		"haveIDownvoted": func(id string) bool {
+			if personID == "" {
+				return false
+			}
+			for _, v := range db.getVotes() {
+				if v.VideoID == id && v.PersonID == personID && !v.Up {
+					return true
+				}
+			}
+			return false
+		},
+	}).ParseFiles(paths...)
+	if err != nil {
+		log.Fatalf("loading templates: %s", err)
+	}
+	name := "index.tpl"
+	err = tmpl.Lookup(name).Execute(w, struct {
+		PersonID string
+		Items    []*video
+	}{
+		PersonID: personID,
+		Items:    db.getVideos(),
+	})
+	if err != nil {
+		log.Fatalf("template execution: %s", err)
+	}
+}
+
+func parseAuth(h string) (string, error) {
+	if !strings.HasPrefix(h, bearerStr) {
+		return "", errors.New("Not a bearer-auth header")
+	}
+	tokenStr := h[len(bearerStr):]
+	tok, err := verifyToken(tokenStr)
+	if err != nil {
+		return "", err
+	}
+	claims := tok.Claims
+	log.Printf("claims: %v", claims)
+	personIDI, ok := claims["sub"]
+	if !ok {
+		return "", errors.New("claims 'sub' field does not exist")
+	}
+	personID, ok := personIDI.(string)
+	if !ok {
+		return "", errors.New("invalid claims 'sub' field")
+	}
+	return personID, nil
 }
 
 func respond(w http.ResponseWriter, statusCode int) {
