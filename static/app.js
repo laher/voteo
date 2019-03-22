@@ -293,16 +293,19 @@ export const add = () => {
       putVideos();
     });
 };
-const superfine = false;
+const itemRenderer = 'none';
 const reflop = async () => {
   var t0 = performance.now();
   const vidList = document.getElementById('videoList');
   if (vidList) {
-    if (superfine) {
+    if (itemRenderer == 'superfine') {
       const render = getRender(vidList);
       render(state.items);
-    } else {
+    } else if (itemRenderer == 'sprintf') {
       vidList.innerHTML = itemsHTML();
+    } else {
+      // no rendererer
+      console.log('warning - no item renderer');
     }
     document.getElementById('videoCount').innerHTML = state.items.length;
   }

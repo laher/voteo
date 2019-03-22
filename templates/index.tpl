@@ -7,13 +7,13 @@
     <title>Voteo</title>
     <meta name="description" content="Video voting app" />
 
-    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="stylesheet" type="text/css" href="./static/style.css" />
     <link rel="home" href="https://laher.github.io/voteo/" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1"
     />
-    <link rel="icon" type="image/png" href="./assets/favicon.png" />
+    <link rel="icon" type="image/png" href="./static/assets/favicon.png" />
     <link rel="canonical" href="https://github.com/laher/voteo" />
 
     <!-- Open graph -->
@@ -21,8 +21,8 @@
     <meta property="og:description" content="Video voting app" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://laher.github.io/voteo/" />
-    <meta property="og:image" content="./assets/card.png" />
-    <meta property="og:image:secure_url" content="./assets/card.png" />
+    <meta property="og:image" content="./static/assets/card.png" />
+    <meta property="og:image:secure_url" content="./static/assets/card.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -45,18 +45,18 @@
     <link
       rel="apple-touch-icon"
       sizes="180x180"
-      href="./assets/icon-512x512.png"
+      href="./static/assets/icon-512x512.png"
     />
 
     <!-- Windows web app -->
-    <meta name="msapplication-TileImage" content="./assets/icon-512x512.png" />
+    <meta name="msapplication-TileImage" content="./static/assets/icon-512x512.png" />
     <meta name="msapplication-TileColor" content="#323232" />
 
     <!-- this style seems appropriate for the main 'app' -->
-    <script type="module" src="./app.js"></script>
+    <script type="module" src="./static/app.js"></script>
     <!-- second style seems appropriate for a 'library' -->
     <script type="module">
-      import { showSignInModal } from './auth-okta.js';
+      import { showSignInModal } from './static/auth-okta.js';
       document.getElementById('sign-in').addEventListener('click', event => {
         event.preventDefault();
         showSignInModal();
@@ -132,7 +132,7 @@
               </h3>
               <p id="videoListHolder">
               <ul id="videoList" class="list">
-                <li></li>
+                {{template "items.tpl" .}}
               </ul>
               </p>
             </div>
