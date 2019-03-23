@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -279,18 +280,59 @@ func templateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("loading templates: %s", err)
 	}
-	name := "index.tpl"
+	name := ""
+	parts := strings.Split(r.URL.Path, "/")
+	part := parts[len(parts)-1]
+	switch part {
+	case "items":
+		name = "items.tpl"
+	case "":
+		// ok
+		name = "index.tpl"
+	default:
+		respond(w, http.StatusNotFound)
+		return
+	}
+	videos := db.getVideos()
+	votes := db.getVotes()
+	sortByVotes(videos, votes)
 	err = tmpl.Lookup(name).Execute(w, struct {
 		PersonID string
 		Items    []*video
 	}{
 		PersonID: personID,
-		Items:    db.getVideos(),
+		Items:    videos,
 	})
 	if err != nil {
 		log.Fatalf("template execution: %s", err)
 	}
 }
+
+func sortByVotes(videos []*video, votes []*vote) {
+	// reset votes ...
+	for _, video := range videos {
+		video.Votes = 0
+	}
+	for _, vote := range votes {
+		for _, video := range videos {
+			if video.ID == vote.VideoID {
+				if vote.Up {
+					video.Votes++
+				} else {
+
+					video.Votes--
+				}
+			}
+		}
+	}
+	sort.Sort(sort.Reverse(videosByVotes(videos)))
+}
+
+type videosByVotes []*video
+
+func (a videosByVotes) Len() int           { return len(a) }
+func (a videosByVotes) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a videosByVotes) Less(i, j int) bool { return a[i].Votes < a[j].Votes }
 
 func parseAuth(h string) (string, error) {
 	if !strings.HasPrefix(h, bearerStr) {

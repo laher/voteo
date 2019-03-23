@@ -44,7 +44,9 @@ export const haveIVoted = id => {
   );
 };
 
-const itemsHTML = id => {
+const itemsHTMLFetch = () => {};
+
+const itemsHTML = () => {
   return state.items
     .sort((a, b) => countVotes(b.id) - countVotes(a.id))
     .map(
@@ -132,6 +134,23 @@ export const downvote = i => {
   }
   vote.up = false;
   postVote(vote);
+};
+
+const getVideosHTML = vidList => {
+  fetch(`/items`, {
+    method: 'get',
+    cache: 'no-cache',
+    headers: {
+      Authorization: 'Bearer ' + getAccessToken(),
+    },
+  })
+    .then(function(response) {
+      console.log(response);
+      return response.text();
+    })
+    .then(function(body) {
+      vidList.innerHTML = body;
+    });
 };
 
 const getVideos = () => {
@@ -293,19 +312,25 @@ export const add = () => {
       putVideos();
     });
 };
-const itemRenderer = 'none';
+const itemRenderer = 'htmlFetch';
 const reflop = async () => {
   var t0 = performance.now();
   const vidList = document.getElementById('videoList');
   if (vidList) {
-    if (itemRenderer == 'superfine') {
-      const render = getRender(vidList);
-      render(state.items);
-    } else if (itemRenderer == 'sprintf') {
-      vidList.innerHTML = itemsHTML();
-    } else {
-      // no rendererer
-      console.log('warning - no item renderer');
+    switch (itemRenderer) {
+      case 'superfine':
+        const render = getRender(vidList);
+        render(state.items);
+        break;
+      case 'htmlString':
+        vidList.innerHTML = itemsHTML();
+        break;
+      case 'htmlFetch':
+        getVideosHTML(vidList);
+        break;
+      default:
+        // no rendererer
+        console.log('warning - no item renderer');
     }
     document.getElementById('videoCount').innerHTML = state.items.length;
   }
