@@ -34,6 +34,7 @@ const renderOktaSignIn = () => {
         'signin success. tokenManager:',
         state.oktaSignIn.tokenManager
       );
+      updateAuthCookie();
       state.personId = res[0].claims.email;
       hideOkta();
       showSignInOut(state.personId);
@@ -54,18 +55,21 @@ export const showSignInModal = () => {
   }
 };
 
-export const initOkta = oktaConf => {
+export const initOkta = (oktaConf, reFetchFn) => {
   state.oktaSignIn = new OktaSignIn(oktaConf);
   document.getElementById('sign-out').addEventListener('click', event => {
     event.preventDefault();
     console.log('signout clicked');
     state.personId = null;
+    state.accessToken = null;
+    updateAuthCookie();
     state.oktaSignIn.session.close(err => {
       if (err) {
         alert(`Error: ${err}`);
       }
       hideOkta();
       showSignInOut(null);
+      reFetch();
     });
   });
   renderOktaSignIn();
@@ -76,14 +80,19 @@ export const initOkta = oktaConf => {
       state.accessToken = state.oktaSignIn.tokenManager.get(
         'access_token'
       ).accessToken;
+      updateAuthCookie();
       hideOkta();
       showSignInOut(state.personId);
+      reFetchFn();
     } else {
       console.log('not signed in');
       hideOkta();
       showSignInOut(null);
     }
     // get (with auth as appropriate - or otherwise)
-    reFetch();
   });
+};
+
+const updateAuthCookie = () => {
+  document.cookie = 'auth=' + getAccessToken();
 };

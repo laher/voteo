@@ -15,7 +15,7 @@
               <img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('{{$i.ID}}')" />
   {{ end }}
  {{ else }}
-          <abbr title='log in to vote'><img src="https://img.icons8.com/material/24/000000/question.png" onclick="alert('log in to vote')"></abbr>
+          <abbr title='log in to vote'><img style="visibility:hidden" src="https://img.icons8.com/material/24/000000/question.png" onclick="alert('log in to vote')"></abbr>
  {{ end }}
         </div>
     </div></li>

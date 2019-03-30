@@ -96,30 +96,18 @@ func loadConfig() {
 
 func voteHandler(w http.ResponseWriter, r *http.Request) {
 
-	var personID = "unknown"
+	personID, err := parseAuth(r)
 	switch r.Method {
 	case http.MethodGet:
 		// no auth needed
-	default:
-		h := r.Header.Get("Authorization")
-		if !strings.HasPrefix(h, bearerStr) {
-			respond(w, http.StatusUnauthorized)
-			log.Printf("No auth header: [%s]", h)
-			return
+		if err != nil {
+			personID = "unknown"
 		}
-		tokenStr := h[len(bearerStr):]
-		tok, err := verifyToken(tokenStr)
+	default:
 		if err != nil {
 			respond(w, http.StatusUnauthorized)
-			log.Printf("Verification failure: %v", err)
+			log.Printf("auth failure: %v", err)
 			return
-		}
-		claims := tok.Claims
-		log.Printf("claims: %v", claims)
-
-		personIDI, ok := claims["sub"]
-		if ok {
-			personID, ok = personIDI.(string)
 		}
 		switch r.Method {
 		case http.MethodDelete:
@@ -192,21 +180,12 @@ func videosHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		// no auth required ...
 	default:
-		h := r.Header.Get("Authorization")
-		if !strings.HasPrefix(h, bearerStr) {
-			log.Printf("No auth header: [%s]", h)
-			respond(w, http.StatusUnauthorized)
-			return
-		}
-		tokenStr := h[len(bearerStr):]
-		tok, err := verifyToken(tokenStr)
+		_, err := parseAuth(r)
 		if err != nil {
-			log.Printf("Verification failure: %v", err)
+			log.Printf("Auth failure: %v", err)
 			respond(w, http.StatusUnauthorized)
 			return
 		}
-		claims := tok.Claims
-		log.Printf("claims: %s", claims)
 		switch r.Method {
 		case http.MethodPost:
 			// apply a vote
@@ -231,7 +210,7 @@ func videosHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func templateHandler(w http.ResponseWriter, r *http.Request) {
-	personID, err := parseAuth(r.Header.Get("Authorization"))
+	personID, err := parseAuth(r)
 	if err != nil {
 		// not logged in
 	}
@@ -334,11 +313,11 @@ func (a videosByVotes) Len() int           { return len(a) }
 func (a videosByVotes) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a videosByVotes) Less(i, j int) bool { return a[i].Votes < a[j].Votes }
 
-func parseAuth(h string) (string, error) {
-	if !strings.HasPrefix(h, bearerStr) {
-		return "", errors.New("Not a bearer-auth header")
+func parseAuth(r *http.Request) (string, error) {
+	tokenStr, err := getAuth(r)
+	if err != nil {
+		return "", err
 	}
-	tokenStr := h[len(bearerStr):]
 	tok, err := verifyToken(tokenStr)
 	if err != nil {
 		return "", err

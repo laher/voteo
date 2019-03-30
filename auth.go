@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	jwtverifier "github.com/okta/okta-jwt-verifier-golang"
 )
@@ -41,4 +42,17 @@ func verifyToken(tokenStr string) (*jwtverifier.Jwt, error) {
 
 	token, err := verifier.VerifyAccessToken(tokenStr)
 	return token, err
+}
+
+func getAuth(r *http.Request) (string, error) {
+	h := r.Header.Get("Authorization")
+	if !strings.HasPrefix(h, bearerStr) {
+		c, err := r.Cookie("auth")
+		if err != nil {
+			return "", err
+		}
+		return c.Value, nil
+	}
+	tokenStr := h[len(bearerStr):]
+	return tokenStr, nil
 }

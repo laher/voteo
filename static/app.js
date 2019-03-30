@@ -374,7 +374,8 @@ const start = () => {
       console.log(JSON.stringify(json));
       state.conf = json;
       if (json['type'] == 'okta') {
-        initOkta(json.okta);
+        const reFetchFn = itemRenderer == 'htmlFetch' ? function() {} : reFetch;
+        initOkta(json.okta, reFetchFn);
       } else {
         // assume it's no-login
         reFetch();
