@@ -10,7 +10,7 @@ let state = {
     { id: 'BCkCvay4-DQ', title: 'Foos' },
   ],
   votes: [{ videoId: 'x7hFERntlog', personId: 'am', up: true }],
-  selectedItem: 'X7hFERntlog',
+  selectedItem: '',
 };
 
 export const countVotes = id => {
@@ -80,8 +80,9 @@ const itemsHTML = () => {
 };
 
 export const setSelectedItem = i => {
-  state.selectedItem = i;
-  show(i);
+  history.pushState({ video: i }, 'title 1', '#v=' + i);
+  console.log('history', history.state);
+  loadSelectedItem({ state: history.state });
 };
 
 const show = i => {
@@ -361,6 +362,7 @@ const start = () => {
   window.setSelectedItem = setSelectedItem;
   window.preview = preview;
   window.add = add;
+  window.addEventListener('popstate', loadSelectedItem);
   fetch(`/auth/settings`, {
     method: 'get',
   })
@@ -378,17 +380,25 @@ const start = () => {
         reFetch();
       }
     });
+  loadSelectedItem({});
 };
 
+const loadSelectedItem = event => {
+  console.log(
+    'location: ' + document.location + ', state: ' + JSON.stringify(event.state)
+  );
+
+  let id = '';
+  if (event && event.state && event.state.video) {
+    id = event.state.video;
+  } else {
+    const u = new URL(document.location);
+    if (u.hash.startsWith('#v=')) {
+      id = u.hash.substring(3);
+    }
+  }
+  state.selectedItem = id;
+  show(id);
+};
 // Listen on page load:
 window.addEventListener('load', start);
-/*
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('adding event listeners');
-  document.getElementById('add').addEventListener('click', () => add);
-  document.getElementById('addbox').addEventListener('change', () => preview);
-  document
-    .getElementById('sign-in')
-    .addEventListener('click', () => showSignInModal);
-  console.log('done adding event listeners');
-}); */
