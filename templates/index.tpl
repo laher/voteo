@@ -79,16 +79,16 @@
   <body>
     <div>
       <div id="nav">
-        <ul id="logged-in" style="display:none">
+        <ul id="logged-in" style="{{ if .PersonID }}{{ else }}display:none{{ end }}">
           <li>
             <abbr title="Voteo is a video voting app for teams">Voteo</abbr>
           </li>
-          <li id="name"></li>
+          <li id="name">{{ .PersonID }}</li>
           <li class="button">
             <a href="#" id="sign-out" class="">Sign out</a>
           </li>
         </ul>
-        <div id="logged-out" class="loggedout">
+        <div id="logged-out" class="loggedout" style="{{ if .PersonID }}display:none{{ end }}" >
           <ul>
             <li>
               <abbr title="Voteo is a video voting app for teams">Voteo</abbr>
