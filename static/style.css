@@ -1,10 +1,12 @@
 :root {
   --card-bg: #FFF;
-  --main-bg: #3B8BEB;
-  --nav-bg: #3AAFA9;
+  --main-bg: #D3E3F3;
+  --nav-bg: #30A953;
   --nav-fg: #EBEBEB;
-  --list-even: #D3E3F3;
-  --list-odd: #77A6F7;
+  --list-even: #ffffff;
+  --list-odd: #f2e2e2;
+  --xlist-even: #D3E3F3;
+  --xlist-odd: #77A6F7;
   --header-fg: #351F39;
 }
 
@@ -45,8 +47,10 @@ html {
   font-size: responsive 16px 18px;
   font-range: 420px 1280px;
   color: #222222;
-  background: var(--main-bg);
-
+  background-color: var(--main-bg);
+  /*
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,.5) 10px, rgba(255,255,255,.5) 200px);
+   */
   /*
    *
   background: repeating-linear-gradient(
