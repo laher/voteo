@@ -8,19 +8,19 @@
     <meta name="description" content="Video voting app" />
 
     <link rel="stylesheet" type="text/css" href="./static/style.css" />
-    <link rel="home" href="https://laher.github.io/voteo/" />
+    <link rel="home" href="https://voteo.laher.net.nz/" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1"
     />
-    <link rel="icon" type="image/png" href="./static/assets/favicon.png" />
+    <link rel="shortcut icon" type="image/png" href="/static/assets/favicon.png" />
     <link rel="canonical" href="https://github.com/laher/voteo" />
 
     <!-- Open graph -->
     <meta property="og:title" content="Voteo" />
     <meta property="og:description" content="Video voting app" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://laher.github.io/voteo/" />
+    <meta property="og:url" content="https://voteo.laher.net.nz/" />
     <meta property="og:image" content="./static/assets/card.png" />
     <meta property="og:image:secure_url" content="./static/assets/card.png" />
     <meta property="og:image:type" content="image/png" />
@@ -30,11 +30,11 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" value="summary" />
-    <meta name="twitter:url" content="https://laher.github.io/voteo/" />
+    <meta name="twitter:url" content="https://voteo.laher.net.nz/" />
     <meta name="twitter:title" content="Voteo" />
 
     <!-- Android web app -->
-    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="manifest" href="/static/manifest.webmanifest" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#323232" />
 
@@ -123,7 +123,7 @@
                 />
                 <button id="add" onclick="add()">
                   <img
-                    src="https://img.icons8.com/material/24/000000/plus.png"
+                    src="https://img.icons8.com/material-two-tone/24/000000/plus.png"
                     title="Add the video"
                   />
                 </button>
@@ -131,6 +131,7 @@
               <h3>
                 Vote for one of these <span id="videoCount"></span> videos
               </h3>
+              <span><em>Click to preview</em></span>
               <p id="videoListHolder">
               <ul id="videoList" class="list">
                 {{template "items.tpl" .}}
@@ -138,7 +139,6 @@
               </p>
             </div>
             <div class="info">
-              <span>Click to view.</span>
             </div>
           </div>
           <div class="right">

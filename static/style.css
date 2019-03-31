@@ -1,9 +1,36 @@
 :root {
-  --main-bg-color-old: #303c6c;
-  --main-bg-color: coral;
-  --nav-bg-old: #f4976c;
+  --card-bg: #FFF;
+  --main-bg: #3B8BEB;
+  --nav-bg: #3AAFA9;
+  --nav-fg: #EBEBEB;
+  --list-even: #D3E3F3;
+  --list-odd: #77A6F7;
+  --header-fg: #351F39;
+}
+
+:root-z {
+  --main-bg: #2B3E50;
+  --nav-bg: #3AAFA9;
+  --nav-fg: #EBEBEB;
+  --list-even: #EAE7DC;
+  --list-odd: #A8D0E6;
+  --card-bg: #abb6c2;
+  --header-fg: #351F39;
+}
+
+:root-y {
+  --main-bg: #726A95;
+  --nav-bg: #351F39;
+  --nav-fg: #e3e3e3;
+  --list-even: #A0C1B8;
+  --list-odd: #709FB0;
+  --card-bg: #F4E8C1;
+  --header-fg: #351F39;
+}
+
+:root-x {
+  --main-bg: coral;
   --nav-bg: #303c6c;
-  --nav-fg-old: #222222;
   --nav-fg: #e3e3e3;
   --list-even: #d2fdff;
   --list-odd: #b4dfe5;
@@ -18,7 +45,34 @@ html {
   font-size: responsive 16px 18px;
   font-range: 420px 1280px;
   color: #222222;
-  background: var(--main-bg-color);
+  background: var(--main-bg);
+
+  /*
+   *
+  background: repeating-linear-gradient(
+    0deg,
+    #d0d0d0,
+    #d0d0d0 35px,
+    #707070 35px,
+    #707070 37px,
+    #d0d0d0,50px,
+    #d0d0d0 59px,
+    #707070 59px,
+    #707070 64px,
+    #d0d0d0 70px
+  );
+  xbackground: repeating-linear-gradient(
+    0deg,
+    #d0d0d0,
+    #d0d0d0 10px,
+    #202020 10px,
+    #202020 11px,
+    #d0d0d0 11px,
+    #d0d0d0 15px,
+    #707070 15px,
+    #707070 20px
+  );
+  */
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -66,6 +120,10 @@ ul.nav li {
 ul.list {
   list-style: none inside none;
   padding-left: 0;
+}
+
+#videoListHolder {
+  border-radius: 30px;
 }
 
 ul.list img {
@@ -136,6 +194,7 @@ div.loggedout {
 
 ul.list li {
   padding: 5px;
+  border-radius: 3px;
   border-bottom: 0px dotted #a0a0a0;
   border-right: 0px dotted #a0a0a0;
   width: 96%;
@@ -192,10 +251,10 @@ input[type='text'],
 input[type='tel'],
 input[type='url'],
 input[type='password'] {
-  width: 70%;
+  width: 85%;
   padding: 0.5rem 1rem;
-  background-color: #ffffff;
-  border-radius: 3rem;
+  background-color: #f0f0f0;
+  border-radius: 10px;
   /*  &:hover {
   background-color: rgba(255,255,255,0.15);
   }
