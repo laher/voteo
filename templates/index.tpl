@@ -124,6 +124,7 @@
                 <button id="add" onclick="add()">
                   <img
                     src="https://img.icons8.com/material/24/000000/plus.png"
+                    title="Add the video"
                   />
                 </button>
               </div>

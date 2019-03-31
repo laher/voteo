@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -220,7 +219,7 @@ func templateHandler(w http.ResponseWriter, r *http.Request) {
 		filepath.Join(dir, "items.tpl"),
 	}
 	tmpl, err := template.New("index.tpl").Funcs(template.FuncMap{
-		"countVotes": func(id string) string {
+		"countVotes": func(id string) int {
 			count := 0
 			for _, v := range db.getVotes() {
 				if v.VideoID == id {
@@ -231,7 +230,18 @@ func templateHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-			return strconv.Itoa(count)
+			return count
+		},
+		"haveIVoted": func(id string) bool {
+			if personID == "" {
+				return false
+			}
+			for _, v := range db.getVotes() {
+				if v.VideoID == id && v.PersonID == personID {
+					return true
+				}
+			}
+			return false
 		},
 		"haveIUpvoted": func(id string) bool {
 			if personID == "" {
