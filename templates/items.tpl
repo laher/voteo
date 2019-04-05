@@ -1,10 +1,17 @@
 {{ $personID := .PersonID }}
 {{ range $index, $i := .Items }}
-<li><div>
-    <div onclick="setSelectedItem('{{$i.ID}}')">{{$i.Title}} </div>
-
+<li>
+  <div class="video-item" x="{{rand}}" data-id="{{$i.ID}}">
+    <div class="title">
+      {{$i.Title}} 
+    </div>
     <div>
-      <div style="padding-right: 5px">
+
+      <span class="loadingSpan" style="display:none">
+        <img src="https://img.icons8.com/material-two-tone/24/000000/loading.png" style="visibility:hidden">
+        <img src="https://img.icons8.com/material-two-tone/24/000000/loading.png">
+      </span>
+      <div class="votingSpan" style="padding-right: 5px">
         <em>
           <abbr title='Current vote count'>
             {{ if (gt (countVotes $i.ID) 0) }}+{{ countVotes $i.ID }}
@@ -13,19 +20,18 @@
           </abbr>
         </em>
       </div>
-      {{- if $personID }}
-      {{ if haveIVoted $i.ID }}
-      <img src="https://img.icons8.com/material-two-tone/24/000000/undo.png" style="visibility:hidden">
-      <img src="https://img.icons8.com/material-two-tone/24/000000/undo.png" onclick="unvote('{{$i.ID}}')" title="Undo Vote" />
-      {{ else }}
-      <img src="https://img.icons8.com/material-two-tone/24/000000/like.png" onclick="upvote('{{$i.ID}}')" title="Upvote" />
-      <img src="https://img.icons8.com/material-two-tone/24/000000/dislike.png" onclick="downvote('{{$i.ID}}')" title="Downvote" />
-      {{ end }}
-      {{ else }}
-      <abbr title='log in to vote'><img src="https://img.icons8.com/small/24/000000/thumbs-up-down.png" onclick="alert('log in to vote')"></abbr>
-      {{ end }}
+      <span class="votingSpan" {{ if not $personID }}style="display:none"{{end}}>
+        <span class="unvoteSpan" {{ if not (haveIVoted $i.ID) }}style="display:none"{{ end }}>
+          <img src="https://img.icons8.com/material-two-tone/24/000000/undo.png" style="visibility:hidden">
+          <img class="unvote" src="https://img.icons8.com/material-two-tone/24/000000/undo.png" title="Undo Vote" />
+        </span>
+        <span class="voteSpan" {{ if haveIVoted $i.ID }}style="display:none"{{ end }}>
+          <img class="upvote" src="https://img.icons8.com/material-two-tone/24/000000/like.png" title="Upvote" />
+          <img class="downvote" src="https://img.icons8.com/material-two-tone/24/000000/dislike.png" title="Downvote" />
+        </span>
+      </span>
+      <abbr {{ if $personID }}style="display:none"{{ end }} title='log in to vote'><img class="loginToVote" src="https://img.icons8.com/small/24/000000/thumbs-up-down.png"></abbr>
     </div>
   </div>
-
 </li>
 {{ end }}

@@ -130,6 +130,17 @@ ul.list {
   border-radius: 30px;
 }
 
+#videoListHolder .video-item {
+  opacity: 1;
+  transition: opacity 2s linear;
+}
+
+.hidden {
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s 2s, opacity 2s linear;
+}
+
 ul.list img {
   cursor: pointer;
 }

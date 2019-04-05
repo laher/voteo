@@ -55,7 +55,7 @@ export const showSignInModal = () => {
   }
 };
 
-export const initOkta = (oktaConf, reFetchFn) => {
+export const initOkta = oktaConf => {
   state.oktaSignIn = new OktaSignIn(oktaConf);
   document.getElementById('sign-out').addEventListener('click', event => {
     event.preventDefault();
@@ -83,7 +83,6 @@ export const initOkta = (oktaConf, reFetchFn) => {
       updateAuthCookie();
       hideOkta();
       showSignInOut(state.personId);
-      reFetchFn();
     } else {
       console.log('not signed in');
       hideOkta();

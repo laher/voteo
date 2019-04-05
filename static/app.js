@@ -1,7 +1,6 @@
 'use strict';
 
 import { initOkta, getAccessToken, getPersonId } from './auth-okta.js';
-import { getRender } from './sf.js';
 
 let state = {
   items: [
@@ -46,39 +45,6 @@ export const haveIVoted = id => {
 
 const itemsHTMLFetch = () => {};
 
-const itemsHTML = () => {
-  return state.items
-    .sort((a, b) => countVotes(b.id) - countVotes(a.id))
-    .map(
-      i =>
-        `
-    <li><div>
-    <div onclick="setSelectedItem('${i.id}')">${i.title} (${countVotes(
-          i.id
-        )} votes)</div>
-    <div>` +
-        (getPersonId()
-          ? (haveIUpvoted(i.id)
-              ? `<img src="https://img.icons8.com/material/24/000000/undo.png" onclick="unvote('${
-                  i.id
-                }')" />`
-              : `<img src="https://img.icons8.com/material/24/000000/circled-chevron-up.png" onclick="upvote('${
-                  i.id
-                }')" />`) +
-            (haveIDownvoted(i.id)
-              ? `<img src="https://img.icons8.com/material/24/000000/undo.png" onclick="unvote('${
-                  i.id
-                }')" />`
-              : `<img src="https://img.icons8.com/material/24/000000/circled-chevron-down.png" onclick="downvote('${
-                  i.id
-                }')" /> `)
-          : `<abbr title='log in to vote'><img src="https://img.icons8.com/material/24/000000/question.png" onclick="alert('log in to vote')"></abbr>`) +
-        `</div>
-    </div></li>`
-    )
-    .join('');
-};
-
 export const setSelectedItem = i => {
   history.pushState({ video: i }, 'title 1', '#v=' + i);
   console.log('history', history.state);
@@ -112,6 +78,14 @@ export const upvote = i => {
     vote = { personId: getPersonId(), videoId: i };
   }
   vote.up = true;
+  const d = document.querySelector(`div[data-id='${i}']`);
+  d.querySelectorAll('.votingSpan').forEach(item => {
+    item.style.display = 'none';
+  });
+  d.querySelector('.loadingSpan').style.display = 'block';
+  document.querySelectorAll('div.video-item').forEach(item => {
+    item.classList.add('hidden');
+  });
   postVote(vote);
 };
 
@@ -122,6 +96,14 @@ export const unvote = i => {
   if (!vote) {
     vote = { personId: getPersonId(), videoId: i };
   }
+  const d = document.querySelector(`div[data-id='${i}']`);
+  d.querySelectorAll('.votingSpan').forEach(item => {
+    item.style.display = 'none';
+  });
+  d.querySelector('.loadingSpan').style.display = 'block';
+  document.querySelectorAll('div.video-item').forEach(item => {
+    item.classList.add('hidden');
+  });
   deleteVote(vote);
 };
 
@@ -134,6 +116,14 @@ export const downvote = i => {
     vote = { personId: getPersonId(), videoId: i };
   }
   vote.up = false;
+  const d = document.querySelector(`div[data-id='${i}']`);
+  d.querySelectorAll('.votingSpan').forEach(item => {
+    item.style.display = 'none';
+  });
+  d.querySelector('.loadingSpan').style.display = 'block';
+  document.querySelectorAll('div.video-item').forEach(item => {
+    item.classList.add('hidden');
+  });
   postVote(vote);
 };
 
@@ -150,8 +140,13 @@ const getVideosHTML = vidList => {
       return response.text();
     })
     .then(function(body) {
-      vidList.innerHTML = body;
+      updateVidList(body);
     });
+};
+
+const updateVidList = body => {
+  document.getElementById('videoList').innerHTML = body;
+  addHandlers();
 };
 
 const getVideos = () => {
@@ -192,8 +187,9 @@ const getVotes = () => {
     })
     .then(function(json) {
       console.log(json);
-      state.votes = json;
-      reflop();
+      state.votes = json.Votes;
+      updateVidList(json.ItemsHTML);
+      //reflop();
     });
 };
 
@@ -255,8 +251,10 @@ const postVote = vote => {
     })
     .then(function(json) {
       console.log(json);
-      state.votes = json;
-      reflop();
+      //state.votes = json;
+      state.votes = json.Votes;
+      updateVidList(json.ItemsHTML);
+      //reflop();
     });
 };
 
@@ -278,8 +276,10 @@ const deleteVote = vote => {
     })
     .then(function(json) {
       console.log(json);
-      state.votes = json;
-      reflop();
+      //state.votes = json;
+      state.votes = json.Votes;
+      updateVidList(json.ItemsHTML);
+      //reflop();
     });
 };
 
@@ -313,32 +313,44 @@ export const add = () => {
       putVideos();
     });
 };
-const itemRenderer = 'htmlFetch';
+
 const reflop = async () => {
   var t0 = performance.now();
   const vidList = document.getElementById('videoList');
   if (vidList) {
-    switch (itemRenderer) {
-      case 'superfine':
-        const render = getRender(vidList);
-        render(state.items);
-        break;
-      case 'htmlString':
-        vidList.innerHTML = itemsHTML();
-        break;
-      case 'htmlFetch':
-        getVideosHTML(vidList);
-        break;
-      default:
-        // no rendererer
-        console.log('warning - no item renderer');
-    }
+    getVideosHTML(vidList);
     document.getElementById('videoCount').innerHTML = state.items.length;
   }
   show(state.selectedItem);
-
   var t1 = performance.now();
   console.log('Call to reflop took ' + (t1 - t0) + ' milliseconds.');
+};
+
+const addHandlers = () => {
+  console.log('set up selectors / event listeners');
+  const nodeList = document
+    .getElementById('videoList')
+    .querySelectorAll('div.video-item');
+  //const nodeList = document.querySelectorAll('div.video-item');
+  console.log('found ', nodeList.length, ' items');
+  Array.from(nodeList).forEach(item => {
+    const videoId = item.getAttribute('data-id');
+    item.querySelector('.title').addEventListener('click', e => {
+      setSelectedItem(videoId);
+    });
+    item.querySelector('.upvote').addEventListener('click', e => {
+      upvote(videoId);
+    });
+    item.querySelector('.downvote').addEventListener('click', e => {
+      downvote(videoId);
+    });
+    item.querySelector('.unvote').addEventListener('click', e => {
+      unvote(videoId);
+    });
+    item.querySelector('.loginToVote').addEventListener('click', e => {
+      alert('log in to vote');
+    });
+  });
 };
 
 export const showSignInOut = personId => {
@@ -362,6 +374,7 @@ const start = () => {
   window.setSelectedItem = setSelectedItem;
   window.preview = preview;
   window.add = add;
+  addHandlers();
   window.addEventListener('popstate', loadSelectedItem);
   fetch(`/auth/settings`, {
     method: 'get',
@@ -374,8 +387,7 @@ const start = () => {
       console.log(JSON.stringify(json));
       state.conf = json;
       if (json['type'] == 'okta') {
-        const reFetchFn = itemRenderer == 'htmlFetch' ? function() {} : reFetch;
-        initOkta(json.okta, reFetchFn);
+        initOkta(json.okta);
       } else {
         // assume it's no-login
         reFetch();

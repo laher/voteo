@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -167,9 +169,22 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 			vote.PersonID = ""
 		}
 	}
-	b, _ := json.Marshal(votes)
+	tmpl := getTemplates(personID)
+
+	bs := bytes.NewBufferString("")
+	videos := db.getVideos()
+	doTemplate(bs, tmpl, "items.tpl", videos, votes, personID)
+	itemsHTML := bs.String()
+	j := struct {
+		Votes     []*vote
+		ItemsHTML string
+	}{
+		Votes:     votes,
+		ItemsHTML: itemsHTML,
+	}
+	b, _ := json.Marshal(j)
 	w.Write(b)
-	log.Printf("Returned: %+v", votes)
+	log.Printf("Returned: %+v", j)
 }
 
 const bearerStr = "Bearer "
@@ -208,17 +223,14 @@ func videosHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Returned: %+v", videos)
 }
 
-func templateHandler(w http.ResponseWriter, r *http.Request) {
-	personID, err := parseAuth(r)
-	if err != nil {
-		// not logged in
-	}
+func getTemplates(personID string) *template.Template {
 	dir := "templates"
 	paths := []string{
 		filepath.Join(dir, "index.tpl"),
 		filepath.Join(dir, "items.tpl"),
 	}
 	tmpl, err := template.New("index.tpl").Funcs(template.FuncMap{
+		"rand": rand.Float64,
 		"countVotes": func(id string) int {
 			count := 0
 			for _, v := range db.getVotes() {
@@ -269,6 +281,16 @@ func templateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("loading templates: %s", err)
 	}
+	return tmpl
+}
+
+func templateHandler(w http.ResponseWriter, r *http.Request) {
+	personID, err := parseAuth(r)
+	if err != nil {
+		// not logged in
+	}
+
+	tmpl := getTemplates(personID)
 	name := ""
 	parts := strings.Split(r.URL.Path, "/")
 	part := parts[len(parts)-1]
@@ -284,8 +306,12 @@ func templateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	videos := db.getVideos()
 	votes := db.getVotes()
+	doTemplate(w, tmpl, name, videos, votes, personID)
+}
+
+func doTemplate(w io.Writer, tmpl *template.Template, name string, videos []*video, votes []*vote, personID string) {
 	sortByVotes(videos, votes)
-	err = tmpl.Lookup(name).Execute(w, struct {
+	err := tmpl.Lookup(name).Execute(w, struct {
 		PersonID string
 		Items    []*video
 	}{
