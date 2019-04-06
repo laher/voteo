@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 
 	jwtverifier "github.com/okta/okta-jwt-verifier-golang"
 )
+
+const bearerStr = "Bearer "
 
 func authInfoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -55,4 +58,26 @@ func getAuth(r *http.Request) (string, error) {
 	}
 	tokenStr := h[len(bearerStr):]
 	return tokenStr, nil
+}
+
+func parseAuth(r *http.Request) (string, error) {
+	tokenStr, err := getAuth(r)
+	if err != nil {
+		return "", err
+	}
+	tok, err := verifyToken(tokenStr)
+	if err != nil {
+		return "", err
+	}
+	claims := tok.Claims
+	log.Printf("claims: %v", claims)
+	personIDI, ok := claims["sub"]
+	if !ok {
+		return "", errors.New("claims 'sub' field does not exist")
+	}
+	personID, ok := personIDI.(string)
+	if !ok {
+		return "", errors.New("invalid claims 'sub' field")
+	}
+	return personID, nil
 }
