@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -123,6 +125,7 @@ func (db *ddb) getVideos() ([]*video, error) {
 		}
 		videos = append(videos, item)
 	}
+	log.Printf("found %d videos", len(videos))
 	return videos, nil
 }
 

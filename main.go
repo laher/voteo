@@ -16,6 +16,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -33,15 +34,18 @@ var (
 func main() {
 	fs := http.FileServer(http.Dir("."))
 	http.Handle("/static/", fs)
-	http.HandleFunc("/", templateHandler)
-	http.HandleFunc("/videos", videosHandler)
-	http.HandleFunc("/vote", voteHandler)
-	http.HandleFunc("/yt/data", ytMetadataProxy)
+	loadConfig()
+	cfg := &aws.Config{
+		Endpoint: aws.String("http://localhost:8000"),
+		Region:   aws.String("us-east-1"),
+	}
+	h := newHandler(cfg)
+	http.HandleFunc("/", h.templateHandler)
+	http.HandleFunc("/videos", h.videosHandler)
+	http.HandleFunc("/vote", h.voteHandler)
+	http.HandleFunc("/yt/data", h.ytMetadataProxy)
 	http.HandleFunc("/auth/settings", authInfoHandler)
 	http.HandleFunc("/register", registrationHandler)
-	loadConfig()
-	db.loadVideos()
-	db.loadVotes()
 	log.Println("Listening...")
 	if config.SSL {
 		log.Fatal(http.Serve(autocert.NewListener(config.Address), nil))
@@ -94,8 +98,15 @@ func loadConfig() {
 		log.Fatalf("Couldnt decode config: %v", err)
 	}
 }
+func newHandler(awsConfig *aws.Config) *handler {
+	return &handler{db: newDynamodb(awsConfig)}
+}
 
-func voteHandler(w http.ResponseWriter, r *http.Request) {
+type handler struct {
+	db *ddb
+}
+
+func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
 
 	personID, err := parseAuth(r)
 	switch r.Method {
@@ -127,52 +138,63 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 			myVote.PersonHash = fmt.Sprintf("%x", hash.Sum(nil))
 			found := false
 			newVotes := []*vote{}
-			for _, v := range db.getVotes() {
+			votes, err := h.db.getVotes()
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				log.Printf("Couldnt decode: %v", err)
+				return
+			}
+			for _, v := range votes {
 				if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
 					found = true
 				} else {
 					newVotes = append(newVotes, v)
 				}
+				h.db.putVote(v)
 			}
 			if found {
-				db.writeVotes(newVotes)
 				log.Printf("Updated: %+v", myVote)
 			}
 		case http.MethodPost:
 			// replace with received blob
 			myVote := &vote{}
 			d := json.NewDecoder(r.Body)
-			err = d.Decode(myVote)
-			if err != nil {
+			if err := d.Decode(myVote); err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				log.Printf("Couldnt decode: %v", err)
 				return
 			}
-			found := false
-			myVotes := db.getVotes()
-			for _, v := range myVotes {
-				if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
-					v.Up = myVote.Up
-					found = true
-				}
+			if err := h.db.putVote(myVote); err != nil {
+				respond(w, http.StatusInternalServerError)
+				log.Printf("Could not put vote: %s", err)
+				return
 			}
-			if !found {
-				myVotes = append(myVotes, myVote)
-			}
-			db.writeVotes(myVotes)
-			log.Printf("Updated: %+v", myVote)
 		}
 	}
-	votes := db.getVotes()
+	votes, err := h.db.getVotes()
+	if err != nil {
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
 	for _, vote := range votes {
 		if personID == "unknown" || vote.PersonID != personID {
 			vote.PersonID = ""
 		}
 	}
-	tmpl := getTemplates(personID)
-
+	tmpl, err := h.getTemplates(personID)
+	if err != nil {
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
 	bs := bytes.NewBufferString("")
-	videos := db.getVideos()
+	videos, err := h.db.getVideos()
+	if err != nil {
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
 	doTemplate(bs, tmpl, "items.tpl", videos, votes, personID)
 	itemsHTML := bs.String()
 	j := struct {
@@ -189,7 +211,7 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 
 const bearerStr = "Bearer "
 
-func videosHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handler) videosHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		// no auth required ...
@@ -213,17 +235,30 @@ func videosHandler(w http.ResponseWriter, r *http.Request) {
 				respond(w, http.StatusBadRequest)
 				return
 			}
-			db.writeVideos(myVideos)
+			for _, v := range myVideos {
+				err := h.db.put(v)
+				if err != nil {
+					log.Printf("Couldnt decode: %v", err)
+					respond(w, http.StatusInternalServerError)
+					return
+				}
+			}
 			log.Printf("Updated: %+v", myVideos)
 		}
 	}
-	videos := db.getVideos()
+	videos, err := h.db.getVideos()
+	if err != nil {
+		// could not connect
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
 	b, _ := json.Marshal(videos)
 	w.Write(b)
 	log.Printf("Returned: %+v", videos)
 }
 
-func getTemplates(personID string) *template.Template {
+func (h *handler) getTemplates(personID string) (*template.Template, error) {
 	dir := "templates"
 	paths := []string{
 		filepath.Join(dir, "index.tpl"),
@@ -233,7 +268,11 @@ func getTemplates(personID string) *template.Template {
 		"rand": rand.Float64,
 		"countVotes": func(id string) int {
 			count := 0
-			for _, v := range db.getVotes() {
+			votes, err := h.db.getVotes()
+			if err != nil {
+				return 0
+			}
+			for _, v := range votes {
 				if v.VideoID == id {
 					if v.Up {
 						count++
@@ -248,7 +287,11 @@ func getTemplates(personID string) *template.Template {
 			if personID == "" {
 				return false
 			}
-			for _, v := range db.getVotes() {
+			votes, err := h.db.getVotes()
+			if err != nil {
+				return false
+			}
+			for _, v := range votes {
 				if v.VideoID == id && v.PersonID == personID {
 					return true
 				}
@@ -259,7 +302,11 @@ func getTemplates(personID string) *template.Template {
 			if personID == "" {
 				return false
 			}
-			for _, v := range db.getVotes() {
+			votes, err := h.db.getVotes()
+			if err != nil {
+				return false
+			}
+			for _, v := range votes {
 				if v.VideoID == id && v.PersonID == personID && v.Up {
 					return true
 				}
@@ -270,7 +317,11 @@ func getTemplates(personID string) *template.Template {
 			if personID == "" {
 				return false
 			}
-			for _, v := range db.getVotes() {
+			votes, err := h.db.getVotes()
+			if err != nil {
+				return false
+			}
+			for _, v := range votes {
 				if v.VideoID == id && v.PersonID == personID && !v.Up {
 					return true
 				}
@@ -279,18 +330,24 @@ func getTemplates(personID string) *template.Template {
 		},
 	}).ParseFiles(paths...)
 	if err != nil {
-		log.Fatalf("loading templates: %s", err)
+		log.Printf("Error loading templates: %s", err)
+		return nil, err
 	}
-	return tmpl
+	return tmpl, nil
 }
 
-func templateHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 	personID, err := parseAuth(r)
 	if err != nil {
 		// not logged in
 	}
 
-	tmpl := getTemplates(personID)
+	tmpl, err := h.getTemplates(personID)
+	if err != nil {
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
 	name := ""
 	parts := strings.Split(r.URL.Path, "/")
 	part := parts[len(parts)-1]
@@ -304,8 +361,18 @@ func templateHandler(w http.ResponseWriter, r *http.Request) {
 		respond(w, http.StatusNotFound)
 		return
 	}
-	videos := db.getVideos()
-	votes := db.getVotes()
+	videos, err := h.db.getVideos()
+	if err != nil {
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
+	votes, err := h.db.getVotes()
+	if err != nil {
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
 	doTemplate(w, tmpl, name, videos, votes, personID)
 }
 
@@ -377,7 +444,7 @@ func respond(w http.ResponseWriter, statusCode int) {
 	w.Write(b)
 }
 
-func ytMetadataProxy(w http.ResponseWriter, r *http.Request) {
+func (h *handler) ytMetadataProxy(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		// no video id
