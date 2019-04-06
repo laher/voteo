@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -21,6 +22,9 @@ func newHandler(awsConfig *aws.Config) *handler {
 
 type handler struct {
 	db *ddb
+}
+
+func (h *handler) listHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +116,7 @@ func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Could not fetch metadata: %s", err)
 		return
 	}
-	doTemplate(bs, tmpl, "items.tpl", videos, votes, personID)
+	doTemplate(bs, tmpl, "items.tpl", "", videos, votes, personID)
 	itemsHTML := bs.String()
 	j := struct {
 		Votes     []*vote
@@ -177,8 +181,10 @@ func (h *handler) getTemplates(personID string) (*template.Template, error) {
 	paths := []string{
 		filepath.Join(dir, "index.tpl"),
 		filepath.Join(dir, "items.tpl"),
+		filepath.Join(dir, "video-list.tpl"),
+		filepath.Join(dir, "layout.tpl"),
 	}
-	tmpl, err := template.New("index.tpl").Funcs(template.FuncMap{
+	tmpl, err := template.New("layout.tpl").Funcs(template.FuncMap{
 		"rand": rand.Float64,
 		"countVotes": func(id string) int {
 			count := 0
@@ -262,15 +268,18 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Could not fetch metadata: %s", err)
 		return
 	}
-	name := ""
 	parts := strings.Split(r.URL.Path, "/")
 	part := parts[len(parts)-1]
+	name := "layout.tpl"
+	innerName := ""
 	switch part {
 	case "items":
 		name = "items.tpl"
+	case "video-list":
+		innerName = "video-list.tpl"
 	case "":
-		// ok
-		name = "index.tpl"
+		//innerName = "index.tpl"
+		innerName = "video-list.tpl"
 	default:
 		respond(w, http.StatusNotFound)
 		return
@@ -287,5 +296,36 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Could not fetch metadata: %s", err)
 		return
 	}
-	doTemplate(w, tmpl, name, videos, votes, personID)
+	doTemplate(w, tmpl, name, innerName, videos, votes, personID)
+}
+
+func (h *handler) ytMetadataProxy(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		// no video id
+		respond(w, http.StatusBadRequest)
+		log.Printf("No video ID")
+		return
+	}
+	url := "https://www.youtube.com/oembed?url=http%3A//youtube.com/watch%3Fv%3D" + id
+	resp, err := http.Get(url)
+	if err != nil {
+		// could not connect
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	l := resp.Header.Get("Content-Length")
+	if l != "" {
+		w.Header().Set("Content-Length", l)
+	}
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("Retrieved video metadata for: %+v", id)
+	} else {
+		log.Printf("Error retrieving video metadata for %+v: %v", id, resp.Status)
+	}
 }

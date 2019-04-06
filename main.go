@@ -78,53 +78,22 @@ func loadConfig() {
 	}
 }
 
-func doTemplate(w io.Writer, tmpl *template.Template, name string, videos []*video, votes []*vote, personID string) {
+func doTemplate(w io.Writer, tmpl *template.Template, name, innerName string, videos []*video, votes []*vote, personID string) error {
 	sortByVotes(videos, votes)
 	err := tmpl.Lookup(name).Execute(w, struct {
-		PersonID string
-		Items    []*video
+		PersonID      string
+		Items         []*video
+		InnerTemplate string
 	}{
-		PersonID: personID,
-		Items:    videos,
+		PersonID:      personID,
+		Items:         videos,
+		InnerTemplate: innerName,
 	})
-	if err != nil {
-		log.Fatalf("template execution: %s", err)
-	}
+	return err
 }
 
 func respond(w http.ResponseWriter, statusCode int) {
 	w.WriteHeader(statusCode)
 	b, _ := json.Marshal(`{ "error": "` + http.StatusText(statusCode) + `" }`)
 	w.Write(b)
-}
-
-func (h *handler) ytMetadataProxy(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	if id == "" {
-		// no video id
-		respond(w, http.StatusBadRequest)
-		log.Printf("No video ID")
-		return
-	}
-	url := "https://www.youtube.com/oembed?url=http%3A//youtube.com/watch%3Fv%3D" + id
-	resp, err := http.Get(url)
-	if err != nil {
-		// could not connect
-		respond(w, http.StatusInternalServerError)
-		log.Printf("Could not fetch metadata: %s", err)
-		return
-	}
-	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-	l := resp.Header.Get("Content-Length")
-	if l != "" {
-		w.Header().Set("Content-Length", l)
-	}
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
-	resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		log.Printf("Retrieved video metadata for: %+v", id)
-	} else {
-		log.Printf("Error retrieving video metadata for %+v: %v", id, resp.Status)
-	}
 }

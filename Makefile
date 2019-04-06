@@ -1,7 +1,11 @@
 
 .PHONY: db
 db: ## db
-	docker run -p 8000:8000 amazon/dynamodb-local
+	docker run -p 8000:8000 -v ${HOME}/voteo-data:/data amazon/dynamodb-local -jar DynamoDBLocal.jar -dbPath /data
+
+.PHONY: cleandb
+cleandb: ## clean out local db directory
+	rm -rf ${HOME}/voteo-data
 
 .PHONY: test
 test: ## test

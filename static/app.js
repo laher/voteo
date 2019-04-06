@@ -1,6 +1,16 @@
 'use strict';
 
-import { initOkta, getAccessToken, getPersonId } from './auth-okta.js';
+import { initOkta, getPersonId } from './auth-okta.js';
+import {
+  getVideosHTML,
+  getVideos,
+  getVotes,
+  putVideos,
+  postVote,
+  deleteVote,
+  getMetadataAndThen,
+  createNewList,
+} from './api.js';
 
 let state = {
   items: [
@@ -86,7 +96,10 @@ export const upvote = i => {
   document.querySelectorAll('div.video-item').forEach(item => {
     item.classList.add('hidden');
   });
-  postVote(vote);
+  postVote(vote, json => {
+    state.votes = json.Votes;
+    updateVidList(json.ItemsHTML);
+  });
 };
 
 export const unvote = i => {
@@ -104,7 +117,10 @@ export const unvote = i => {
   document.querySelectorAll('div.video-item').forEach(item => {
     item.classList.add('hidden');
   });
-  deleteVote(vote);
+  deleteVote(vote, json => {
+    state.votes = json.Votes;
+    updateVidList(json.ItemsHTML);
+  });
 };
 
 export const downvote = i => {
@@ -124,24 +140,10 @@ export const downvote = i => {
   document.querySelectorAll('div.video-item').forEach(item => {
     item.classList.add('hidden');
   });
-  postVote(vote);
-};
-
-const getVideosHTML = vidList => {
-  fetch(`/items`, {
-    method: 'get',
-    cache: 'no-cache',
-    headers: {
-      Authorization: 'Bearer ' + getAccessToken(),
-    },
-  })
-    .then(function(response) {
-      console.log(response);
-      return response.text();
-    })
-    .then(function(body) {
-      updateVidList(body);
-    });
+  postVote(vote, json => {
+    state.votes = json.Votes;
+    updateVidList(json.ItemsHTML);
+  });
 };
 
 const updateVidList = body => {
@@ -149,48 +151,15 @@ const updateVidList = body => {
   addHandlers();
 };
 
-const getVideos = () => {
-  fetch(`/videos`, {
-    method: 'get',
-    cache: 'no-cache',
-    headers: {
-      Authorization: 'Bearer ' + getAccessToken(),
-    },
-  })
-    .then(function(response) {
-      console.log(response);
-      return response.json();
-    })
-    .then(function(json) {
-      console.log(json);
-      state.items = json;
-      reflop();
-    });
-};
-
 export const reFetch = () => {
-  getVotes();
-  getVideos();
-};
-
-const getVotes = () => {
-  fetch(`/vote`, {
-    method: 'get',
-    cache: 'no-cache',
-    headers: {
-      Authorization: 'Bearer ' + getAccessToken(),
-    },
-  })
-    .then(function(response) {
-      console.log(response);
-      return response.json();
-    })
-    .then(function(json) {
-      console.log(json);
-      state.votes = json.Votes;
-      updateVidList(json.ItemsHTML);
-      //reflop();
-    });
+  getVotes(() => {
+    state.votes = json.Votes;
+    updateVidList(json.ItemsHTML);
+  });
+  getVideos(() => {
+    state.items = json;
+    reflop();
+  });
 };
 
 const cleanInput = input => {
@@ -201,88 +170,6 @@ const cleanInput = input => {
   return input;
 };
 
-const putVideos = () => {
-  if (!getPersonId()) {
-    alert('Please log in or register to add videos');
-    return;
-  }
-  fetch(`/videos`, {
-    method: 'PUT',
-    cache: 'no-cache',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + getAccessToken(),
-    },
-    redirect: 'follow', // manual, *follow, error
-    referrer: 'no-referrer', // no-referrer, *client
-    body: JSON.stringify(state.items), // body data type must match "Content-Type" header
-  })
-    .then(function(response) {
-      console.log(response);
-      if (response.ok) {
-        return response.json();
-      } else {
-        throw Error(`Request rejected with status ${response.status}`);
-      }
-    })
-    .then(function(json) {
-      console.log(json);
-      state.items = json;
-      reflop();
-    })
-    .catch(console.error);
-};
-
-const postVote = vote => {
-  fetch(`/vote`, {
-    method: 'POST',
-    cache: 'no-cache',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + getAccessToken(),
-    },
-    redirect: 'follow', // manual, *follow, error
-    referrer: 'no-referrer', // no-referrer, *client
-    body: JSON.stringify(vote), // body data type must match "Content-Type" header
-  })
-    .then(function(response) {
-      console.log(response);
-      return response.json();
-    })
-    .then(function(json) {
-      console.log(json);
-      //state.votes = json;
-      state.votes = json.Votes;
-      updateVidList(json.ItemsHTML);
-      //reflop();
-    });
-};
-
-const deleteVote = vote => {
-  fetch(`/vote`, {
-    method: 'DELETE',
-    cache: 'no-cache',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + getAccessToken(),
-    },
-    redirect: 'follow', // manual, *follow, error
-    referrer: 'no-referrer', // no-referrer, *client
-    body: JSON.stringify(vote), // body data type must match "Content-Type" header
-  })
-    .then(function(response) {
-      console.log(response);
-      return response.json();
-    })
-    .then(function(json) {
-      console.log(json);
-      //state.votes = json;
-      state.votes = json.Votes;
-      updateVidList(json.ItemsHTML);
-      //reflop();
-    });
-};
-
 export const preview = () => {
   const id = cleanInput(document.getElementById('addbox').value);
   if (id) {
@@ -290,35 +177,42 @@ export const preview = () => {
   }
 };
 
+export const newList = () => {
+  console.log('new list');
+  const id = cleanInput(document.getElementById('addbox').value);
+  getMetadataAndThen(id, json => {
+    let title = json.title;
+    if (title.length > 30) {
+      title = title.substring(0, 30) + ' ...';
+    }
+    state.items.push({ id: id, title: title });
+    state.selectedItem = id;
+    createNewList(state.items);
+  });
+};
+
 export const add = () => {
   console.log('add');
   const id = cleanInput(document.getElementById('addbox').value);
-
-  fetch(`/yt/data?id=${id}`, {
-    method: 'get',
-  })
-    .then(function(response) {
-      console.log(response);
-      return response.json();
-    })
-    .then(function(json) {
-      console.log(JSON.stringify(json));
-      console.log(json.title);
-      let title = json.title;
-      if (title.length > 30) {
-        title = title.substring(0, 30) + ' ...';
-      }
-      state.items.push({ id: id, title: title });
-      state.selectedItem = id;
-      putVideos();
+  getMetadataAndThen(id, json => {
+    let title = json.title;
+    if (title.length > 30) {
+      title = title.substring(0, 30) + ' ...';
+    }
+    state.items.push({ id: id, title: title });
+    state.selectedItem = id;
+    putVideos(state.items, () => {
+      state.items = json;
+      reflop();
     });
+  });
 };
 
 const reflop = async () => {
   var t0 = performance.now();
   const vidList = document.getElementById('videoList');
   if (vidList) {
-    getVideosHTML(vidList);
+    getVideosHTML(updateVidList);
     document.getElementById('videoCount').innerHTML = state.items.length;
   }
   show(state.selectedItem);
@@ -328,9 +222,7 @@ const reflop = async () => {
 
 const addHandlers = () => {
   console.log('set up selectors / event listeners');
-  const nodeList = document
-    .getElementById('videoList')
-    .querySelectorAll('div.video-item');
+  const nodeList = document.querySelectorAll('div.video-item');
   //const nodeList = document.querySelectorAll('div.video-item');
   console.log('found ', nodeList.length, ' items');
   Array.from(nodeList).forEach(item => {
@@ -374,6 +266,8 @@ const start = () => {
   window.setSelectedItem = setSelectedItem;
   window.preview = preview;
   window.add = add;
+  window.createNewList = createNewList;
+  window.newList = newList;
   addHandlers();
   window.addEventListener('popstate', loadSelectedItem);
   fetch(`/auth/settings`, {
