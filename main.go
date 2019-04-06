@@ -51,16 +51,16 @@ func main() {
 }
 
 type video struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
+	ID    string `json:"id" dynamodbav:"id"`
+	Title string `json:"title" dynamodbav:"title"`
 	Votes int    `json:"votes"`
 }
 
 type vote struct {
-	VideoID    string `json:"videoId"`
-	PersonID   string `json:"personId,omitempty"`
+	VideoID    string `json:"videoId" dynamodbav:"videoId"`
+	PersonID   string `json:"personId,omitempty" dynamodbav:"personId"`
 	PersonHash string `json:"personHash"`
-	Up         bool   `json:"up"`
+	Up         bool   `json:"up" dynamodbav:"up"`
 }
 
 type conf struct {

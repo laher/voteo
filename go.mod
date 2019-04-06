@@ -3,6 +3,7 @@ module github.com/laher/voteo
 go 1.12
 
 require (
+	github.com/aws/aws-sdk-go v1.19.11
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/lestrrat-go/jwx v0.0.0-20180928232350-0d477e6a1f0e // indirect
 	github.com/lestrrat-go/pdebug v0.0.0-20180220043849-39f9a71bcabe // indirect
