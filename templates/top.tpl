@@ -79,9 +79,9 @@
   <body>
     <div>
       <div id="nav">
-        <ul id="logged-in" style="{{ if .PersonID }}{{ else }}display:none{{ end }}">
+        <ul id="logged-in" style="{{ if not .PersonID }}display:none{{ end }}">
           <li>
-            <abbr title="Voteo is a video voting app for teams">Voteo</abbr>
+            <a href="/" title="Voteo is a video voting app for teams">Voteo</a>
           </li>
           <li id="name">{{ .PersonID }}</li>
           <li class="button">
@@ -91,7 +91,7 @@
         <div id="logged-out" class="loggedout" style="{{ if .PersonID }}display:none{{ end }}" >
           <ul>
             <li>
-              <abbr title="Voteo is a video voting app for teams">Voteo</abbr>
+              <a href="/" title="Voteo is a video voting app for teams">Voteo</a>
             </li>
             <li>guest</li>
             <li></li>
@@ -110,9 +110,3 @@
       </div>
       <div id="widget-container"></div>
       <div id="app-container" class="container">
-
-        {{ template "index.tpl" . }}
-      </div>
-    </div>
-  </body>
-</html>

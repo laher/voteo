@@ -1,3 +1,4 @@
+{{ template "top.tpl" . }}
         <div class="card">
           <div class="left">
             <h3>Add a video</h3>
@@ -43,3 +44,4 @@
             </div>
           </div>
         </div>
+{{ template "bottom.tpl" }}

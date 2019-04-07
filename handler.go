@@ -116,7 +116,7 @@ func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Could not fetch metadata: %s", err)
 		return
 	}
-	doTemplate(bs, tmpl, "items.tpl", "", videos, votes, personID)
+	doTemplate(bs, tmpl, "items.tpl", videos, votes, personID)
 	itemsHTML := bs.String()
 	j := struct {
 		Votes     []*vote
@@ -177,14 +177,12 @@ func (h *handler) videosHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) getTemplates(personID string) (*template.Template, error) {
-	dir := "templates"
-	paths := []string{
-		filepath.Join(dir, "index.tpl"),
-		filepath.Join(dir, "items.tpl"),
-		filepath.Join(dir, "video-list.tpl"),
-		filepath.Join(dir, "layout.tpl"),
+	glob := "templates/*.tpl"
+	paths, err := filepath.Glob(glob)
+	if err != nil {
+		return nil, err
 	}
-	tmpl, err := template.New("layout.tpl").Funcs(template.FuncMap{
+	tmpl, err := template.New("index.tpl").Funcs(template.FuncMap{
 		"rand": rand.Float64,
 		"countVotes": func(id string) int {
 			count := 0
@@ -270,20 +268,17 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	parts := strings.Split(r.URL.Path, "/")
 	part := parts[len(parts)-1]
-	name := "layout.tpl"
-	innerName := ""
+	var name string
 	switch part {
-	case "items":
-		name = "items.tpl"
-	case "video-list":
-		innerName = "video-list.tpl"
+	case "items", "video-list", "index":
+		name = part + ".tpl"
 	case "":
-		//innerName = "index.tpl"
-		innerName = "video-list.tpl"
+		name = "index.tpl"
 	default:
 		respond(w, http.StatusNotFound)
 		return
 	}
+	log.Printf("Resolved to template %s", name)
 	videos, err := h.db.getVideos()
 	if err != nil {
 		respond(w, http.StatusInternalServerError)
@@ -296,7 +291,7 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Could not fetch metadata: %s", err)
 		return
 	}
-	doTemplate(w, tmpl, name, innerName, videos, votes, personID)
+	doTemplate(w, tmpl, name, videos, votes, personID)
 }
 
 func (h *handler) ytMetadataProxy(w http.ResponseWriter, r *http.Request) {

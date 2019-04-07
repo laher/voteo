@@ -78,16 +78,14 @@ func loadConfig() {
 	}
 }
 
-func doTemplate(w io.Writer, tmpl *template.Template, name, innerName string, videos []*video, votes []*vote, personID string) error {
+func doTemplate(w io.Writer, tmpl *template.Template, name string, videos []*video, votes []*vote, personID string) error {
 	sortByVotes(videos, votes)
 	err := tmpl.Lookup(name).Execute(w, struct {
-		PersonID      string
-		Items         []*video
-		InnerTemplate string
+		PersonID string
+		Items    []*video
 	}{
-		PersonID:      personID,
-		Items:         videos,
-		InnerTemplate: innerName,
+		PersonID: personID,
+		Items:    videos,
 	})
 	return err
 }

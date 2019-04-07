@@ -1,5 +1,17 @@
 :root {
   --card-bg: #FFF;
+  --main-bg: rgb(57, 204, 204);
+  --nav-bg: rgb(133, 20, 75);
+  --nav-fg: rgb(255, 133, 27);
+  --list-even: #ffffff;
+  --list-odd: #f2e2e2;
+  --xlist-even: #D3E3F3;
+  --xlist-odd: #77A6F7;
+  --header-fg: #351F39;
+}
+
+:root-a {
+  --card-bg: #FFF;
   --main-bg: #D3E3F3;
   --nav-bg: #30A953;
   --nav-fg: #EBEBEB;
@@ -278,9 +290,12 @@ input[type='password'] {
   }*/
 }
 
+
 button {
   cursor: pointer;
   padding: 0.5rem;
+  background-color: #d0d0d0;
+  border-radius: 10px;
 }
 
 button:hover {
@@ -312,29 +327,33 @@ svg {
   padding: 1rem;
   background: var(--card-bg);
   border-radius: 1rem;
-  display: flex;
-  min-height: 420px;
+  display: inline-flex;
+  flex-flow: row wrap;
+  align-items: flex-start;
+  min-height: 220px;
+  width: 100%;
+  max-width: 964px;
   /* This aligns items to the end line on main-axis */
-}
-
-.card > * {
-  padding-right: 10px;
-  padding-left: 10px;
-  flex: 1 100%;
 }
 
 .card .top {
   text-align: center;
-  margin: auto;
   width: 100%;
+  flex: 0 0 100%;
+  max-height: 20%;
 }
+
 
 .card .left {
   width: 50%;
+  padding: 10px;
+  flex: 2;
 }
 
 .card .right {
   width: 50%;
+  flex: 2;
+  padding: 10px;
 }
 
 .card .right .info {
