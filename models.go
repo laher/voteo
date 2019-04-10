@@ -2,6 +2,11 @@ package main
 
 import "sort"
 
+type user struct {
+	ID         string   `json:"id" dynamodbav:"id"`
+	VideoLists []string `json:"videoLists" dynamodbav:"videoLists"`
+}
+
 type videoList struct {
 	ID        string   `json:"id" dynamodbav:"id"`
 	Videos    []*video `json:"videos" dynamodbav:"videos"`

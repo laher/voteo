@@ -24,18 +24,20 @@ func TestDynamoLocal(t *testing.T) {
 		t.Logf("Error creating tables: %v", err)
 	}
 
-	err := d.put(&video{ID: "123", Title: "A time to remember"})
-	if err != nil {
+	if err := d.putVideoList(&videoList{
+		ID:     "a123",
+		Videos: []*video{{ID: "123", Title: "A time to remember"}},
+	}); err != nil {
 		t.Error("Error putting video:", err)
 	}
-	videos, err := d.getVideos()
+	videoLists, err := d.getVideoLists()
 	if err != nil {
 		t.Error("Error getting videos:", err)
 	}
-	if len(videos) != 1 {
-		t.Errorf("should be one video - got %+v", len(videos))
+	if len(videoLists) != 1 {
+		t.Errorf("should be one video - got %+v", len(videoLists))
 	} else {
-		t.Logf("Success: videos[0]: %+v", videos[0])
+		t.Logf("Success: videoLists[0]: %+v", videoLists[0])
 	}
 
 	err = d.putVote(&vote{VideoID: "123", PersonID: "Me", Up: true})

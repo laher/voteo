@@ -57,10 +57,20 @@
     <!-- second style seems appropriate for a 'library' -->
     <script type="module">
       import { showSignInModal } from './static/auth-okta.js';
-      document.getElementById('sign-in').addEventListener('click', event => {
-        event.preventDefault();
-        showSignInModal();
+      window.addEventListener('load', () => {
+        const signIn = document.getElementById('sign-in');
+        if (signIn) {
+        signIn.addEventListener('click', event => {
+          event.preventDefault();
+          showSignInModal();
+        });
+        }
       });
+    </script>
+
+    <script type="module">
+      import { pageInit } from './static/{{ .PageName }}.js';
+      window.pageInit = pageInit; 
     </script>
     <script
       src="https://ok1static.oktacdn.com/assets/js/sdk/okta-auth-js/2.0.1/okta-auth-js.min.js"

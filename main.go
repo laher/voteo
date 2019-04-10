@@ -27,14 +27,15 @@ func main() {
 	fs := http.FileServer(http.Dir("."))
 	http.Handle("/static/", fs)
 	loadConfig()
-	cfg := &aws.Config{
-		Endpoint: aws.String("http://localhost:8000"),
+	awsCfg := &aws.Config{
+		Endpoint: aws.String(config.DB),
 		Region:   aws.String("us-east-1"),
 	}
-	h := newHandler(cfg)
+	h := newHandler(awsCfg)
 	http.HandleFunc("/", h.templateHandler)
 	http.HandleFunc("/videos", h.videosHandler)
 	http.HandleFunc("/vote", h.voteHandler)
+	http.HandleFunc("/videoLists", h.videoListsHandler)
 	http.HandleFunc("/yt/data", h.ytMetadataProxy)
 	http.HandleFunc("/auth/settings", authInfoHandler)
 	http.HandleFunc("/register", registrationHandler)
@@ -50,6 +51,7 @@ type conf struct {
 	SSL     bool     `json:"ssl"`
 	Address string   `json:"address"`
 	Auth    authConf `json:"auth"`
+	DB      string   `json:"db"`
 }
 
 type authConf struct {
@@ -78,14 +80,16 @@ func loadConfig() {
 	}
 }
 
-func doTemplate(w io.Writer, tmpl *template.Template, name string, videos []*video, votes []*vote, personID string) error {
-	sortByVotes(videos, votes)
+func doTemplate(w io.Writer, tmpl *template.Template, name string, myVideoList *videoList, myVideoLists []*videoList, personID string) error {
+	//sortByVotes(videos, votes)
 	err := tmpl.Lookup(name).Execute(w, struct {
-		PersonID string
-		Items    []*video
+		PersonID   string
+		VideoList  *videoList
+		VideoLists []*videoList
 	}{
-		PersonID: personID,
-		Items:    videos,
+		PersonID:   personID,
+		VideoList:  myVideoList,
+		VideoLists: myVideoLists,
 	})
 	return err
 }

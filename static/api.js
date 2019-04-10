@@ -2,8 +2,8 @@
 
 import { getAccessToken, getPersonId } from './auth-okta.js';
 
-export const getVideosHTML = andThen => {
-  fetch(`/items`, {
+export const getVideosHTML = (id, andThen) => {
+  fetch(`/items?id=${id}`, {
     method: 'get',
     cache: 'no-cache',
     headers: {
@@ -19,8 +19,8 @@ export const getVideosHTML = andThen => {
     });
 };
 
-export const getVideos = andThen => {
-  fetch(`/videos`, {
+export const getVideoList = (id, andThen) => {
+  fetch(`/videoLists?id=${id}`, {
     method: 'get',
     cache: 'no-cache',
     headers: {
@@ -36,38 +36,46 @@ export const getVideos = andThen => {
       andThen(json);
     });
 };
+export const addVideoToList = (listId, video, andThen) => {};
 
-export const getVotes = andThen => {
-  fetch(`/vote`, {
-    method: 'get',
-    cache: 'no-cache',
-    headers: {
-      Authorization: 'Bearer ' + getAccessToken(),
-    },
-  })
-    .then(function(response) {
-      console.log(response);
-      return response.json();
-    })
-    .then(function(json) {
-      console.log(json);
-      andThen(json);
-    });
-};
-
-export const createNewList = andThen => {
+export const putNewVideoList = (video, andThen) => {
   if (!getPersonId()) {
     alert('Please log in or register to create a video list');
     return;
   }
+  const item = { creatorId: getPersonId(), videos: [video] };
+  fetch(`/videoLists`, {
+    method: 'PUT',
+    cache: 'no-cache',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + getAccessToken(),
+    },
+    redirect: 'follow', // manual, *follow, error
+    referrer: 'no-referrer', // no-referrer, *client
+    body: JSON.stringify(item), // body data type must match "Content-Type" header
+  })
+    .then(function(response) {
+      console.log(response);
+      if (response.ok) {
+        return response.json();
+      } else {
+        throw Error(`Request rejected with status ${response.status}`);
+      }
+    })
+    .then(function(json) {
+      console.log(json);
+      andThen(json);
+    })
+    .catch(console.error);
 };
 
-export const putVideos = (items, andThen) => {
+export const putVideo = (id, item, andThen) => {
   if (!getPersonId()) {
     alert('Please log in or register to add videos');
     return;
   }
-  fetch(`/videos`, {
+  fetch(`/videos?id=${id}`, {
     method: 'PUT',
     cache: 'no-cache',
     headers: {
@@ -93,8 +101,8 @@ export const putVideos = (items, andThen) => {
     .catch(console.error);
 };
 
-export const postVote = (vote, andThen) => {
-  fetch(`/vote`, {
+export const postVote = (id, vote, andThen) => {
+  fetch(`/vote?id=${id}`, {
     method: 'POST',
     cache: 'no-cache',
     headers: {
@@ -115,8 +123,8 @@ export const postVote = (vote, andThen) => {
     });
 };
 
-export const deleteVote = vote => {
-  fetch(`/vote`, {
+export const deleteVote = (id, vote, andThen) => {
+  fetch(`/vote?id=${id}`, {
     method: 'DELETE',
     cache: 'no-cache',
     headers: {
@@ -137,7 +145,7 @@ export const deleteVote = vote => {
     });
 };
 
-export const getMetadataAndThen = (id, andThen) => {
+export const getMetadata = (id, andThen) => {
   fetch(`/yt/data?id=${id}`, {
     method: 'get',
   })

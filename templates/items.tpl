@@ -1,5 +1,5 @@
 {{ $personID := .PersonID }}
-{{ range $index, $i := .Items }}
+{{ range $index, $i := .VideoList.Videos }}
 <li>
   <div class="video-item" x="{{rand}}" data-id="{{$i.ID}}">
     <div class="title">

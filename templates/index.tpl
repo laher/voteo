@@ -14,9 +14,8 @@
                   id="addbox"
                   type="text"
                   placeholder="Drop a youtube video id or url here ..."
-                  onchange="preview()"
                 />
-                <button id="add" onclick="createNewList()">
+                <button id="add">
                   <img
                     src="https://img.icons8.com/material-two-tone/24/000000/plus.png"
                     title="Add the video"
@@ -29,7 +28,15 @@
           </div>
           <div class="right">
             <h3>My Lists</h3>
-            {{ template "video-lists.tpl" . }}
+            <ul id="videoLists" class="list">
+            </ul>
           </div>
         </div>
+
+<script>
+  // note: html/template doesn't properly escape '<script type="modules">' in the same way as '<script>'
+window.addEventListener('load', () => {
+  pageInit({{ .VideoLists }});
+});
+</script>
 {{ template "bottom.tpl" }}

@@ -1,4 +1,4 @@
-import { showSignInOut, reFetch } from './app.js';
+import { showSignInOut } from './app.js';
 
 let state = {
   personId: null,
@@ -38,7 +38,6 @@ const renderOktaSignIn = () => {
       state.personId = res[0].claims.email;
       hideOkta();
       showSignInOut(state.personId);
-      reFetch();
     }
   });
   state.oktaSignIn.hide();
@@ -55,7 +54,7 @@ export const showSignInModal = () => {
   }
 };
 
-export const initOkta = oktaConf => {
+export const initOkta = (oktaConf, andThen) => {
   state.oktaSignIn = new OktaSignIn(oktaConf);
   document.getElementById('sign-out').addEventListener('click', event => {
     event.preventDefault();
@@ -69,7 +68,6 @@ export const initOkta = oktaConf => {
       }
       hideOkta();
       showSignInOut(null);
-      reFetch();
     });
   });
   renderOktaSignIn();
@@ -89,6 +87,7 @@ export const initOkta = oktaConf => {
       showSignInOut(null);
     }
     // get (with auth as appropriate - or otherwise)
+    andThen();
   });
 };
 

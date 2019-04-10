@@ -9,6 +9,7 @@ require (
 	github.com/lestrrat-go/pdebug v0.0.0-20180220043849-39f9a71bcabe // indirect
 	github.com/okta/okta-jwt-verifier-golang v0.0.0-20180501213203-04702def3e1b
 	github.com/pkg/errors v0.8.1 // indirect
+	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.3.0 // indirect
 	golang.org/x/crypto v0.0.0-20190313024323-a1f597ede03a
 )

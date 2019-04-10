@@ -8,9 +8,8 @@
                   id="addbox"
                   type="text"
                   placeholder="Drop a youtube video id or url here ..."
-                  onchange="preview()"
                 />
-                <button id="add" onclick="add()">
+                <button id="add">
                   <img
                     src="https://img.icons8.com/material-two-tone/24/000000/plus.png"
                     title="Add the video"
@@ -23,7 +22,6 @@
               <span><em>Click to preview</em></span>
               <p id="videoListHolder">
               <ul id="videoList" class="list">
-                {{template "items.tpl" .}}
               </ul>
               </p>
             </div>
@@ -40,8 +38,15 @@
                 height="315"
                 src=""
                 allowfullscreen
-              />
+                ></iframe>
             </div>
           </div>
         </div>
+
+<script>
+  // note: html/template doesn't properly escape '<script type="modules">' in the same way as '<script>'
+window.addEventListener('load', () => {
+  pageInit({{ .VideoList }});
+});
+</script>
 {{ template "bottom.tpl" }}

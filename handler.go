@@ -1,19 +1,19 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws"
+	uuid "github.com/satori/go.uuid"
 )
 
 func newHandler(awsConfig *aws.Config) *handler {
@@ -28,7 +28,14 @@ func (h *handler) listHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
-
+	id := r.URL.Query().Get("id")
+	myVideoList, err := h.db.getVideoList(id)
+	if err != nil {
+		// could not connect
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
 	personID, err := parseAuth(r)
 	switch r.Method {
 	case http.MethodGet:
@@ -103,30 +110,64 @@ func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
 			vote.PersonID = ""
 		}
 	}
-	tmpl, err := h.getTemplates(personID)
-	if err != nil {
-		respond(w, http.StatusInternalServerError)
-		log.Printf("Could not fetch metadata: %s", err)
-		return
-	}
-	bs := bytes.NewBufferString("")
-	videos, err := h.db.getVideos()
-	if err != nil {
-		respond(w, http.StatusInternalServerError)
-		log.Printf("Could not fetch metadata: %s", err)
-		return
-	}
-	doTemplate(bs, tmpl, "items.tpl", videos, votes, personID)
-	itemsHTML := bs.String()
 	j := struct {
 		Votes     []*vote
-		ItemsHTML string
+		VideoList *videoList
 	}{
 		Votes:     votes,
-		ItemsHTML: itemsHTML,
+		VideoList: myVideoList,
 	}
 	b, _ := json.Marshal(j)
 	w.Write(b)
+}
+
+func (h *handler) videoListsHandler(w http.ResponseWriter, r *http.Request) {
+	var id string
+	switch r.Method {
+	case http.MethodGet:
+		// no auth required ...
+		id = r.URL.Query().Get("id")
+	default:
+		_, err := parseAuth(r)
+		if err != nil {
+			log.Printf("Auth failure: %v", err)
+			respond(w, http.StatusUnauthorized)
+			return
+		}
+		switch r.Method {
+		case http.MethodPut:
+			// replace with received blob
+			myVideoList := &videoList{}
+			d := json.NewDecoder(r.Body)
+			err := d.Decode(&myVideoList)
+			if err != nil {
+				log.Printf("Couldnt decode: %v", err)
+				respond(w, http.StatusBadRequest)
+				return
+			}
+			if myVideoList.ID == "" {
+				myVideoList.ID = uuid.NewV4().String()
+			}
+			id = myVideoList.ID
+			err = h.db.putVideoList(myVideoList)
+			if err != nil {
+				log.Printf("Couldnt decode: %v", err)
+				respond(w, http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Updated: %+v", myVideoList)
+		}
+	}
+	myVideoList, err := h.db.getVideoList(id)
+	if err != nil {
+		// could not connect
+		respond(w, http.StatusInternalServerError)
+		log.Printf("Could not fetch metadata: %s", err)
+		return
+	}
+	b, _ := json.Marshal(myVideoList)
+	w.Write(b)
+	log.Printf("Returned: %+v", myVideoList)
 }
 
 func (h *handler) videosHandler(w http.ResponseWriter, r *http.Request) {
@@ -216,6 +257,10 @@ func (h *handler) getTemplates(personID string) (*template.Template, error) {
 			}
 			return false
 		},
+		"json": func(v interface{}) string {
+			a, _ := json.Marshal(v)
+			return string(a)
+		},
 		"haveIUpvoted": func(id string) bool {
 			if personID == "" {
 				return false
@@ -259,7 +304,6 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// not logged in
 	}
-
 	tmpl, err := h.getTemplates(personID)
 	if err != nil {
 		respond(w, http.StatusInternalServerError)
@@ -268,30 +312,69 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	parts := strings.Split(r.URL.Path, "/")
 	part := parts[len(parts)-1]
-	var name string
 	switch part {
-	case "items", "video-list", "index":
-		name = part + ".tpl"
-	case "":
-		name = "index.tpl"
+	case "video-list":
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			respond(w, http.StatusNotFound)
+			log.Printf("Could not fetch metadata: %s", err)
+			return
+		}
+		myVideoList, err := h.db.getVideoList(id)
+		if err != nil {
+			respond(w, http.StatusNotFound)
+			log.Printf("Could not fetch metadata: %s", err)
+			return
+		}
+		log.Printf("video list found: %s, %+v, %d", id, myVideoList, len(myVideoList.Videos))
+		name := part + ".tpl"
+		log.Printf("Resolved to template %s", name)
+		err = tmpl.Lookup(name).Execute(w, struct {
+			Page      string
+			PageName  string
+			PersonID  string
+			VideoList *videoList
+		}{
+			Page:      name,
+			PageName:  strings.Replace(name, ".tpl", "", -1),
+			PersonID:  personID,
+			VideoList: myVideoList,
+		})
+		if err != nil {
+			respond(w, http.StatusInternalServerError)
+			log.Printf("Could not fetch metadata: %s", err)
+			return
+		}
+	case "", "index":
+		myVideoLists, err := h.db.getVideoLists()
+		if err != nil {
+			respond(w, http.StatusNotFound)
+			log.Printf("Could not fetch metadata: %s", err)
+			return
+		}
+		log.Printf("video lists found: %d", len(myVideoLists))
+		name := "index.tpl"
+		err = tmpl.Lookup(name).Execute(w, struct {
+			Page       string
+			PageName   string
+			PersonID   string
+			VideoLists []*videoList
+		}{
+			Page:       name,
+			PageName:   strings.Replace(name, ".tpl", "", -1),
+			PersonID:   personID,
+			VideoLists: myVideoLists,
+		})
+		if err != nil {
+			respond(w, http.StatusInternalServerError)
+			log.Printf("Could not fetch metadata: %s", err)
+			return
+		}
 	default:
 		respond(w, http.StatusNotFound)
 		return
 	}
-	log.Printf("Resolved to template %s", name)
-	videos, err := h.db.getVideos()
-	if err != nil {
-		respond(w, http.StatusInternalServerError)
-		log.Printf("Could not fetch metadata: %s", err)
-		return
-	}
-	votes, err := h.db.getVotes()
-	if err != nil {
-		respond(w, http.StatusInternalServerError)
-		log.Printf("Could not fetch metadata: %s", err)
-		return
-	}
-	doTemplate(w, tmpl, name, videos, votes, personID)
+
 }
 
 func (h *handler) ytMetadataProxy(w http.ResponseWriter, r *http.Request) {
