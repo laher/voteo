@@ -1,11 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+
+	_ "github.com/lib/pq"
 )
 
 type pdb struct {
@@ -29,7 +30,7 @@ func newDB(url string) (*pdb, error) {
 //func (db *pdb) dropTables() error   {}
 
 func (db *pdb) getUser(id string) (*user, error) {
-	row := db.db.QueryRowx(`SELECT * FROM users WHERE id = $1 ORDER BY rank`, id)
+	row := db.db.QueryRowx(`SELECT * FROM users WHERE id = $1`, id)
 	f := &user{}
 	if err := row.StructScan(f); err != nil {
 		return nil, err
@@ -40,7 +41,7 @@ func (db *pdb) getUser(id string) (*user, error) {
 //func (db *pdb) createUser(u *user) error {}
 
 func (db *pdb) getVideoList(id int) (*videoList, error) {
-	row := db.db.QueryRowx(`SELECT * FROM videoLists WHERE id = $1 ORDER BY rank`, id)
+	row := db.db.QueryRowx(`SELECT * FROM video_lists WHERE id = $1`, id)
 	f := &videoList{}
 	if err := row.StructScan(f); err != nil {
 		return nil, err
@@ -49,7 +50,7 @@ func (db *pdb) getVideoList(id int) (*videoList, error) {
 }
 
 func (db *pdb) getVideoLists(userID string) ([]*videoList, error) {
-	rows, err := db.db.Queryx(`SELECT * FROM video_lists WHERE creator_id = $1 ORDER by inserted_at`, userID)
+	rows, err := db.db.Queryx(`SELECT * FROM video_lists WHERE creator = $1 ORDER by inserted_at`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -57,6 +58,8 @@ func (db *pdb) getVideoLists(userID string) ([]*videoList, error) {
 	videoLists := []*videoList{}
 	for rows.Next() {
 		f := &videoList{}
+		f.Videos = []*video{}
+		f.Votes = []*vote{}
 		if err := rows.StructScan(f); err != nil {
 			return nil, err
 		}
@@ -85,36 +88,23 @@ func (db *pdb) getVideosForList(videoListID int) ([]*video, error) {
 
 func (db *pdb) addVideoToList(v *video) error {
 	sqlUpdate := `INSERT INTO videos (video_list_id, video, creator, inserted_at)
-		  VALUES ($1, $2, $3, NOW())`
-	res, err := db.db.Exec(sqlUpdate,
-		v.VideoListID, v.ID, v.CreatorID)
+		  VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id`
+	err := db.db.QueryRowx(sqlUpdate,
+		v.VideoListID, v.ID, v.CreatorID).Scan(&v.ID)
 	if err != nil {
 		return errors.Wrap(err, "Failed to insert video")
-	}
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return errors.Wrap(err, "Failed to get rows affected")
-	}
-	if rowsAffected != 1 {
-		err = sql.ErrNoRows
-		return err
 	}
 	return nil
 }
 
 func (db *pdb) putVote(v *vote) error {
-	sqlUpdate := `INSERT INTO videos (video_list_id, video, creator_id, up, inserted_at)
-		  VALUES ($1, $2, $3, NOW()) RETURNING id`
-	res, err := db.db.Exec(sqlUpdate,
-		v.VideoListID, v.VideoID, v.Up, v.PersonID)
+	sqlUpdate := `INSERT INTO videos (video_list_id, video, creator, up, inserted_at)
+		  VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id`
+	err := db.db.QueryRowx(sqlUpdate,
+		v.VideoListID, v.VideoID, v.Up, v.PersonID).Scan(&v.ID)
 	if err != nil {
 		return errors.Wrap(err, "Failed to insert video")
 	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return errors.Wrap(err, "Failed to get rows affected")
-	}
-	v.ID = int(id)
 	return nil
 }
 
@@ -136,17 +126,12 @@ func (db *pdb) getVotes(videoListID int) ([]*vote, error) {
 }
 
 func (db *pdb) createVideoList(vl *videoList) error {
-	sqlUpdate := `INSERT INTO video_lists (creator_id, title, inserted_at)
-		  VALUES ($1,$2,NOW()) RETURNING id`
-	res, err := db.db.Exec(sqlUpdate,
-		vl.CreatorID, vl.Title)
+	sqlUpdate := `INSERT INTO video_lists (creator, title, inserted_at)
+		  VALUES ($1,$2,CURRENT_TIMESTAMP) RETURNING id`
+	err := db.db.QueryRowx(sqlUpdate,
+		vl.CreatorID, vl.Title).Scan(&vl.ID)
 	if err != nil {
 		return errors.Wrap(err, "Failed to insert video_list")
 	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return errors.Wrap(err, "Failed to get rows affected")
-	}
-	vl.ID = int(id)
 	return nil
 }

@@ -38,12 +38,12 @@ export const getVideoList = (id, andThen) => {
 };
 export const addVideoToList = (listId, video, andThen) => {};
 
-export const putNewVideoList = (video, andThen) => {
+export const putNewVideoList = (title, video, andThen) => {
   if (!getPersonId()) {
     alert('Please log in or register to create a video list');
     return;
   }
-  const item = { creatorId: getPersonId(), videos: [video] };
+  const item = { creatorId: getPersonId(), videos: [video], title };
   fetch(`/videoLists`, {
     method: 'PUT',
     cache: 'no-cache',

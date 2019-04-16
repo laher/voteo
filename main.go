@@ -33,9 +33,12 @@ func main() {
 	dsn := fmt.Sprintf(config.PostgresURL, config.PostgresUser, config.PostgresPassword)
 	db, err := newDB(dsn)
 	if err != nil {
-		logrus.Fatalf("Could not connect to DB, (%s), user: %s, %v", config.PostgresURL, err, config.PostgresUser)
+		logrus.Fatalf("Could not connect to DB, (%s), user: %s, error: %v", config.PostgresURL, config.PostgresUser, err)
 	}
-
+	if err = runMigrationsSource(db.db.DB); err != nil {
+		logrus.WithError(err).Fatalf("Could not run migrations (%s), user: %s,", config.PostgresURL, config.PostgresUser)
+	}
+	logrus.Info("Migrations complete")
 	h := newHandler(db)
 	http.HandleFunc("/", h.templateHandler)
 	http.HandleFunc("/videos", h.videosHandler)

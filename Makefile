@@ -1,7 +1,7 @@
 
 .PHONY: db
 db: ## db
-	docker run -p 8000:8000 -v ${HOME}/voteo-data:/data amazon/dynamodb-local -jar DynamoDBLocal.jar -dbPath /data
+	 docker run -p 5432:5432 -e POSTGRES_DB=voteo -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -v ${HOME}/voteo-data:/data postgres:10-alpine
 
 .PHONY: cleandb
 cleandb: ## clean out local db directory

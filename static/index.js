@@ -22,7 +22,7 @@ const newList = () => {
       title = title.substring(0, 30) + ' ...';
     }
     state.selectedItem = id;
-    putNewVideoList({ id: id, title: title }, json => {
+    putNewVideoList('my video list', { sourceId: id, title: title }, json => {
       const videoListId = json.id;
       console.log('created video list', json);
       window.location = '/video-list?id=' + videoListId;
@@ -54,7 +54,7 @@ const reflopVideoLists = () => {
 
 export const pageInit = videoLists => {
   console.log('page init with data: ', videoLists);
-  initAuth();
+  initAuth(() => {});
   setVideoLists(videoLists);
   reflopVideoLists();
   console.log('before');
