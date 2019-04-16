@@ -10,25 +10,28 @@ import (
 	"math/rand"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
-
-	"github.com/aws/aws-sdk-go/aws"
-	uuid "github.com/satori/go.uuid"
 )
 
-func newHandler(awsConfig *aws.Config) *handler {
-	return &handler{db: newDynamodb(awsConfig)}
+func newHandler(db *pdb) *handler {
+	return &handler{db: db}
 }
 
 type handler struct {
-	db *ddb
+	db *pdb
 }
 
 func (h *handler) listHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	if err != nil {
+		respond(w, http.StatusBadRequest)
+		log.Printf("No Video List ID received: %s", err)
+		return
+	}
 	myVideoList, err := h.db.getVideoList(id)
 	if err != nil {
 		// could not connect
@@ -66,7 +69,7 @@ func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
 			myVote.PersonHash = fmt.Sprintf("%x", hash.Sum(nil))
 			found := false
 			newVotes := []*vote{}
-			votes, err := h.db.getVotes()
+			votes, err := h.db.getVotes(id)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				log.Printf("Couldnt decode: %v", err)
@@ -99,7 +102,7 @@ func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	votes, err := h.db.getVotes()
+	votes, err := h.db.getVotes(id)
 	if err != nil {
 		respond(w, http.StatusInternalServerError)
 		log.Printf("Could not fetch metadata: %s", err)
@@ -122,11 +125,17 @@ func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) videoListsHandler(w http.ResponseWriter, r *http.Request) {
-	var id string
+	var id int
 	switch r.Method {
 	case http.MethodGet:
 		// no auth required ...
-		id = r.URL.Query().Get("id")
+		var err error
+		id, err = strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil {
+			respond(w, http.StatusBadRequest)
+			log.Printf("No Video List ID received: %s", err)
+			return
+		}
 	default:
 		_, err := parseAuth(r)
 		if err != nil {
@@ -136,7 +145,6 @@ func (h *handler) videoListsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		switch r.Method {
 		case http.MethodPut:
-			// replace with received blob
 			myVideoList := &videoList{}
 			d := json.NewDecoder(r.Body)
 			err := d.Decode(&myVideoList)
@@ -145,17 +153,14 @@ func (h *handler) videoListsHandler(w http.ResponseWriter, r *http.Request) {
 				respond(w, http.StatusBadRequest)
 				return
 			}
-			if myVideoList.ID == "" {
-				myVideoList.ID = uuid.NewV4().String()
-			}
-			id = myVideoList.ID
-			err = h.db.putVideoList(myVideoList)
+			err = h.db.createVideoList(myVideoList)
 			if err != nil {
-				log.Printf("Couldnt decode: %v", err)
+				log.Printf("Couldnt create: %v", err)
 				respond(w, http.StatusInternalServerError)
 				return
 			}
-			log.Printf("Updated: %+v", myVideoList)
+			id = myVideoList.ID
+			log.Printf("Created: %+v", myVideoList)
 		}
 	}
 	myVideoList, err := h.db.getVideoList(id)
@@ -171,6 +176,12 @@ func (h *handler) videoListsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) videosHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	if err != nil {
+		respond(w, http.StatusBadRequest)
+		log.Printf("No Video List ID received: %s", err)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		// no auth required ...
@@ -195,7 +206,8 @@ func (h *handler) videosHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			for _, v := range myVideos {
-				err := h.db.put(v)
+				v.VideoListID = id
+				err := h.db.addVideoToList(v)
 				if err != nil {
 					log.Printf("Couldnt decode: %v", err)
 					respond(w, http.StatusInternalServerError)
@@ -205,7 +217,7 @@ func (h *handler) videosHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Updated: %+v", myVideos)
 		}
 	}
-	videos, err := h.db.getVideos()
+	videos, err := h.db.getVideosForList(id)
 	if err != nil {
 		// could not connect
 		respond(w, http.StatusInternalServerError)
@@ -217,7 +229,7 @@ func (h *handler) videosHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Returned: %+v", videos)
 }
 
-func (h *handler) getTemplates(personID string) (*template.Template, error) {
+func (h *handler) getTemplates(videoListID int, personID string) (*template.Template, error) {
 	glob := "templates/*.tpl"
 	paths, err := filepath.Glob(glob)
 	if err != nil {
@@ -225,9 +237,9 @@ func (h *handler) getTemplates(personID string) (*template.Template, error) {
 	}
 	tmpl, err := template.New("index.tpl").Funcs(template.FuncMap{
 		"rand": rand.Float64,
-		"countVotes": func(id string) int {
+		"countVotes": func(id int) int {
 			count := 0
-			votes, err := h.db.getVotes()
+			votes, err := h.db.getVotes(videoListID)
 			if err != nil {
 				return 0
 			}
@@ -242,11 +254,11 @@ func (h *handler) getTemplates(personID string) (*template.Template, error) {
 			}
 			return count
 		},
-		"haveIVoted": func(id string) bool {
+		"haveIVoted": func(id int) bool {
 			if personID == "" {
 				return false
 			}
-			votes, err := h.db.getVotes()
+			votes, err := h.db.getVotes(videoListID)
 			if err != nil {
 				return false
 			}
@@ -261,11 +273,11 @@ func (h *handler) getTemplates(personID string) (*template.Template, error) {
 			a, _ := json.Marshal(v)
 			return string(a)
 		},
-		"haveIUpvoted": func(id string) bool {
+		"haveIUpvoted": func(id int) bool {
 			if personID == "" {
 				return false
 			}
-			votes, err := h.db.getVotes()
+			votes, err := h.db.getVotes(videoListID)
 			if err != nil {
 				return false
 			}
@@ -276,11 +288,11 @@ func (h *handler) getTemplates(personID string) (*template.Template, error) {
 			}
 			return false
 		},
-		"haveIDownvoted": func(id string) bool {
+		"haveIDownvoted": func(id int) bool {
 			if personID == "" {
 				return false
 			}
-			votes, err := h.db.getVotes()
+			votes, err := h.db.getVotes(videoListID)
 			if err != nil {
 				return false
 			}
@@ -300,11 +312,22 @@ func (h *handler) getTemplates(personID string) (*template.Template, error) {
 }
 
 func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
+
 	personID, err := parseAuth(r)
 	if err != nil {
 		// not logged in
 	}
-	tmpl, err := h.getTemplates(personID)
+	idS := r.URL.Query().Get("id")
+	var id int
+	if idS != "" {
+		id, err = strconv.Atoi(idS)
+		if err != nil {
+			respond(w, http.StatusBadRequest)
+			log.Printf("No Video List ID received: %s", err)
+			return
+		}
+	}
+	tmpl, err := h.getTemplates(id, personID)
 	if err != nil {
 		respond(w, http.StatusInternalServerError)
 		log.Printf("Could not fetch metadata: %s", err)
@@ -314,10 +337,10 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 	part := parts[len(parts)-1]
 	switch part {
 	case "video-list":
-		id := r.URL.Query().Get("id")
-		if id == "" {
-			respond(w, http.StatusNotFound)
-			log.Printf("Could not fetch metadata: %s", err)
+		id, err := strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil {
+			respond(w, http.StatusBadRequest)
+			log.Printf("No Video List ID received: %s", err)
 			return
 		}
 		myVideoList, err := h.db.getVideoList(id)
@@ -326,7 +349,7 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Could not fetch metadata: %s", err)
 			return
 		}
-		log.Printf("video list found: %s, %+v, %d", id, myVideoList, len(myVideoList.Videos))
+		log.Printf("video list found: %d, %+v, %d", id, myVideoList, len(myVideoList.Videos))
 		name := part + ".tpl"
 		log.Printf("Resolved to template %s", name)
 		err = tmpl.Lookup(name).Execute(w, struct {
@@ -346,7 +369,7 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "", "index":
-		myVideoLists, err := h.db.getVideoLists()
+		myVideoLists, err := h.db.getVideoLists(personID)
 		if err != nil {
 			respond(w, http.StatusNotFound)
 			log.Printf("Could not fetch metadata: %s", err)

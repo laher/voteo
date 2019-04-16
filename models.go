@@ -3,29 +3,41 @@ package main
 import "sort"
 
 type user struct {
-	ID         string   `json:"id" dynamodbav:"id"`
-	VideoLists []string `json:"videoLists" dynamodbav:"videoLists"`
+	ID         string   `json:"id" db:"id"`
+	VideoLists []string `json:"videoLists"`
 }
 
 type videoList struct {
-	ID        string   `json:"id" dynamodbav:"id"`
-	Videos    []*video `json:"videos" dynamodbav:"videos"`
-	Votes     []*vote  `json:"votes" dynamodbav:"votes"`
-	CreatorID string   `json:"creatorId" dynamodbav:"creatorId"`
+	ID        int      `json:"id" db:"id"`
+	Title     string   `json:"title" db:"title"`
+	Videos    []*video `json:"videos"`
+	Votes     []*vote  `json:"votes"`
+	CreatorID string   `json:"creatorId" db:"creator_id"`
 }
 
+type videoSource string
+
+const (
+	youtube videoSource = "youtube"
+)
+
 type video struct {
-	ID        string `json:"id" dynamodbav:"id"`
-	Title     string `json:"title" dynamodbav:"title"`
-	Votes     int    `json:"votes"`
-	CreatorID string
+	ID          int         `json:"id" db:"id"`
+	SourceID    int         `json:"sourceId" db:"source_id"`
+	Source      videoSource `json:"source" db:"source"`
+	VideoListID int         `json:"videoListId" db:"video_list_id"`
+	Title       string      `json:"title" db:"title"`
+	Votes       int         `json:"votes"`
+	CreatorID   string      `json:"creatorId" db:"creator_id"`
 }
 
 type vote struct {
-	VideoID    string `json:"videoId" dynamodbav:"videoId"`
-	PersonID   string `json:"personId,omitempty" dynamodbav:"personId"`
-	PersonHash string `json:"personHash"`
-	Up         bool   `json:"up" dynamodbav:"up"`
+	ID          int    `json:"id" db:"id"`
+	VideoID     int    `json:"videoId" db:"video_id"`
+	VideoListID int    `json:"videoListId" db:"video_list_id"`
+	PersonID    string `json:"personId,omitempty" db:"person_id"`
+	PersonHash  string `json:"personHash"`
+	Up          bool   `json:"up" db:"up"`
 }
 
 func sortByVotes(videos []*video, votes []*vote) {

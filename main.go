@@ -2,24 +2,27 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"text/template"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/acme/autocert"
 )
 
 var (
 	// some videos for the first run (when there's no db yet)
-	initVideos = []*video{
-		{ID: "JntjzuI5rGM", Title: "Dave Grohl Tells ...", Votes: 0},
-		{ID: "X7hFERntlog", Title: "Fearless Organization", Votes: 0},
-		{ID: "d_HHnEROy_w", Title: "Stop managing, start ...", Votes: -1},
-		{ID: "BCkCvay4-DQ", Title: "Push Kick", Votes: 1},
-	}
+	/*
+		initVideos = []*video{
+			{ID: "JntjzuI5rGM", Title: "Dave Grohl Tells ...", Votes: 0},
+			{ID: "X7hFERntlog", Title: "Fearless Organization", Votes: 0},
+			{ID: "d_HHnEROy_w", Title: "Stop managing, start ...", Votes: -1},
+			{ID: "BCkCvay4-DQ", Title: "Push Kick", Votes: 1},
+		}
+	*/
 	config conf
 )
 
@@ -27,11 +30,13 @@ func main() {
 	fs := http.FileServer(http.Dir("."))
 	http.Handle("/static/", fs)
 	loadConfig()
-	awsCfg := &aws.Config{
-		Endpoint: aws.String(config.DB),
-		Region:   aws.String("us-east-1"),
+	dsn := fmt.Sprintf(config.PostgresURL, config.PostgresUser, config.PostgresPassword)
+	db, err := newDB(dsn)
+	if err != nil {
+		logrus.Fatalf("Could not connect to DB, (%s), user: %s, %v", config.PostgresURL, err, config.PostgresUser)
 	}
-	h := newHandler(awsCfg)
+
+	h := newHandler(db)
 	http.HandleFunc("/", h.templateHandler)
 	http.HandleFunc("/videos", h.videosHandler)
 	http.HandleFunc("/vote", h.voteHandler)
@@ -48,10 +53,12 @@ func main() {
 }
 
 type conf struct {
-	SSL     bool     `json:"ssl"`
-	Address string   `json:"address"`
-	Auth    authConf `json:"auth"`
-	DB      string   `json:"db"`
+	SSL              bool     `json:"ssl"`
+	Address          string   `json:"address"`
+	Auth             authConf `json:"auth"`
+	PostgresURL      string   `json:"postgresURL"`
+	PostgresUser     string   `json:"postgresUser"`
+	PostgresPassword string   `json:"postgresPassword"`
 }
 
 type authConf struct {
