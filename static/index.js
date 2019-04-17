@@ -16,17 +16,22 @@ const setVideoLists = videoLists => {
 const newList = () => {
   console.log('new list');
   const id = cleanInput(document.getElementById('addbox').value);
+  const videoListTitle = document.getElementById('video_list_title').value;
   getMetadata(id, json => {
-    let title = json.title;
-    if (title.length > 30) {
-      title = title.substring(0, 30) + ' ...';
+    let videoTitle = json.title;
+    if (videoTitle.length > 30) {
+      videoTitle = videoTitle.substring(0, 30) + ' ...';
     }
     state.selectedItem = id;
-    putNewVideoList('my video list', { sourceId: id, title: title }, json => {
-      const videoListId = json.id;
-      console.log('created video list', json);
-      window.location = '/video-list?id=' + videoListId;
-    });
+    putNewVideoList(
+      videoListTitle,
+      { sourceId: id, title: videoTitle },
+      json => {
+        const videoListId = json.id;
+        console.log('created video list', json);
+        window.location = '/video-list?id=' + videoListId;
+      }
+    );
   });
 };
 

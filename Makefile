@@ -1,7 +1,7 @@
 
 .PHONY: db
 db: ## db
-	 docker run -p 5432:5432 -e POSTGRES_DB=voteo -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -v ${HOME}/voteo-data:/data postgres:10-alpine
+	 docker run -p 5432:5432 -e POSTGRES_DB=voteo -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -v ${HOME}/voteo-data:/var/lib/postgresql/data postgres:10-alpine
 
 .PHONY: cleandb
 cleandb: ## clean out local db directory

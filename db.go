@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -87,23 +88,59 @@ func (db *pdb) getVideosForList(videoListID int) ([]*video, error) {
 }
 
 func (db *pdb) addVideoToList(v *video) error {
-	sqlUpdate := `INSERT INTO videos (video_list_id, video, creator, inserted_at)
-		  VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id`
+	sqlUpdate := `INSERT INTO videos (title, video_list_id, source_id, source, creator, inserted_at, updated_at)
+		  VALUES ($1, $2, $3, 'youtube', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id`
 	err := db.db.QueryRowx(sqlUpdate,
-		v.VideoListID, v.ID, v.CreatorID).Scan(&v.ID)
+		v.Title, v.VideoListID, v.SourceID, v.CreatorID).Scan(&v.ID)
 	if err != nil {
 		return errors.Wrap(err, "Failed to insert video")
 	}
 	return nil
 }
 
-func (db *pdb) putVote(v *vote) error {
-	sqlUpdate := `INSERT INTO videos (video_list_id, video, creator, up, inserted_at)
-		  VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id`
+func (db *pdb) updateVote(v *vote) error {
+	sqlUpdate := `UPDATE votes SET up=$1, updated_at=CURRENT_TIMESTAMP WHERE id=$2`
+	res, err := db.db.Exec(sqlUpdate,
+		v.VideoID, v.Up)
+	if err != nil {
+		return errors.Wrap(err, "Failed to update vote")
+	}
+	if rows, err := res.RowsAffected(); true {
+		if err != nil {
+			return err
+		}
+		if rows != 1 {
+			return errors.New("Failed to update vote")
+		}
+	}
+	return nil
+}
+
+func (db *pdb) deleteVote(v *vote) error {
+	sqlUpdate := `DELETE FROM votes WHERE id=$1`
+	res, err := db.db.Exec(sqlUpdate,
+		v.ID)
+	if err != nil {
+		return errors.Wrap(err, "Failed to delete vote")
+	}
+	if rows, err := res.RowsAffected(); true {
+		if err != nil {
+			return err
+		}
+		if rows != 1 {
+			return errors.New(fmt.Sprintf("Failed to delete vote (%d rows affected)", rows))
+		}
+	}
+	return nil
+}
+
+func (db *pdb) createVote(v *vote) error {
+	sqlUpdate := `INSERT INTO votes (video_list_id, video_id, up, creator, inserted_at, updated_at)
+		  VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id`
 	err := db.db.QueryRowx(sqlUpdate,
 		v.VideoListID, v.VideoID, v.Up, v.PersonID).Scan(&v.ID)
 	if err != nil {
-		return errors.Wrap(err, "Failed to insert video")
+		return errors.Wrap(err, "Failed to insert vote")
 	}
 	return nil
 }
@@ -126,8 +163,8 @@ func (db *pdb) getVotes(videoListID int) ([]*vote, error) {
 }
 
 func (db *pdb) createVideoList(vl *videoList) error {
-	sqlUpdate := `INSERT INTO video_lists (creator, title, inserted_at)
-		  VALUES ($1,$2,CURRENT_TIMESTAMP) RETURNING id`
+	sqlUpdate := `INSERT INTO video_lists (creator, title, inserted_at, updated_at)
+		  VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id`
 	err := db.db.QueryRowx(sqlUpdate,
 		vl.CreatorID, vl.Title).Scan(&vl.ID)
 	if err != nil {

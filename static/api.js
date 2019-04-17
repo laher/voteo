@@ -101,8 +101,8 @@ export const putVideo = (id, item, andThen) => {
     .catch(console.error);
 };
 
-export const postVote = (id, vote, andThen) => {
-  fetch(`/vote?id=${id}`, {
+export const postVote = (videoListId, vote, andThen) => {
+  fetch(`/vote?id=${videoListId}`, {
     method: 'POST',
     cache: 'no-cache',
     headers: {

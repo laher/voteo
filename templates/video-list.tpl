@@ -1,6 +1,8 @@
 {{ template "top.tpl" . }}
         <div class="card">
           <div class="left">
+            <h2>{{ .VideoList.Title }}</h2>
+
             <h3>Add a video</h3>
             <div class="video-list">
               <div class="new-item-form">

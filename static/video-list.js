@@ -117,7 +117,7 @@ export const upvote = i => {
   document.querySelectorAll('div.video-item').forEach(item => {
     item.classList.add('hidden');
   });
-  postVote(vote, json => {
+  postVote(state.videoListId, vote, json => {
     state.videoList.votes = json.Votes;
     updateVidList(json.ItemsHTML);
   });
@@ -138,7 +138,7 @@ export const unvote = i => {
   document.querySelectorAll('div.video-item').forEach(item => {
     item.classList.add('hidden');
   });
-  deleteVote(vote, json => {
+  deleteVote(state.videoListId, vote, json => {
     state.videoList.votes = json.Votes;
     updateVidList(json.ItemsHTML);
   });
@@ -161,7 +161,7 @@ export const downvote = i => {
   document.querySelectorAll('div.video-item').forEach(item => {
     item.classList.add('hidden');
   });
-  postVote(vote, json => {
+  postVote(state.videoListId, vote, json => {
     state.videoList.votes = json.Votes;
     updateVidList(json.ItemsHTML);
   });
@@ -194,7 +194,9 @@ const renderVideos = () => {
   return state.videoList.videos
     .map(
       i => `<li>
-          <div class="video-item" data-id="${i.id}">
+          <div class="video-item" data-source-id="${i.sourceId}" data-id="${
+        i.id
+      }">
             <div class="title">
               ${i.title} 
             </div>
@@ -269,9 +271,10 @@ const addHandlers = () => {
   //const nodeList = document.querySelectorAll('div.video-item');
   console.log('found ', nodeList.length, ' items');
   Array.from(nodeList).forEach(item => {
-    const videoId = item.getAttribute('data-id');
+    const videoId = parseInt(item.getAttribute('data-id'), 10);
+    const sourceId = item.getAttribute('data-source-id');
     item.querySelector('.title').addEventListener('click', e => {
-      setSelectedItem(videoId);
+      setSelectedItem(sourceId);
     });
     item.querySelector('.upvote').addEventListener('click', e => {
       upvote(videoId);

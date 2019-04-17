@@ -6,16 +6,28 @@
                 <p>To start a new list, simply register and add a video below. Later, you can share your list with your friends and get voting.</p>
           </div>
           <div class="left">
-            <h3>Add a video</h3>
-            <em>Add a video to begin a new list</em>
+            <h3>Add a video list</h3>
+            <em>Set a title, and optionally a video, to begin a new list</em>
             <div class="video-list">
+              <div class="video-list-title">
+                <label for="video_list_title">Title</label>
+                <input
+                  id="video_list_title"
+                  type="text"
+                  placeholder="Set a video list name ..."
+                />
+              </div>
               <div class="new-item-form">
+                <label for="addbox">Video ID</label>
                 <input
                   id="addbox"
                   type="text"
                   placeholder="Drop a youtube video id or url here ..."
                 />
+              </div>
+              <div class="video-list-title">
                 <button id="add">
+                  New video list
                   <img
                     src="https://img.icons8.com/material-two-tone/24/000000/plus.png"
                     title="Add the video"

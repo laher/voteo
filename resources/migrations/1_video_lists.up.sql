@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS votes (
     id SERIAL PRIMARY KEY,
     video_id INT NOT NULL,
     video_list_id INT NOT NULL,
-    title VARCHAR(255) NOT NULL,
     creator VARCHAR(255) NOT NULL,
     up bool NOT NULL,
     inserted_at TIMESTAMP with time zone default CURRENT_TIMESTAMP NOT NULL,

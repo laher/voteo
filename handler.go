@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -23,6 +24,31 @@ type handler struct {
 }
 
 func (h *handler) listHandler(w http.ResponseWriter, r *http.Request) {
+}
+
+func (h *handler) getVideoList(id int) (*videoList, error) {
+
+	myVideoList, err := h.db.getVideoList(id)
+	if err != nil {
+		return myVideoList, err
+	}
+	videos, err := h.db.getVideosForList(id)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return myVideoList, err
+		}
+		videos = []*video{}
+	}
+	myVideoList.Videos = videos
+	votes, err := h.db.getVotes(id)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return myVideoList, err
+		}
+		votes = []*vote{}
+	}
+	myVideoList.Votes = votes
+	return myVideoList, nil
 }
 
 func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
@@ -67,24 +93,12 @@ func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
 			hash := sha256.New()
 			hash.Write([]byte(personID))
 			myVote.PersonHash = fmt.Sprintf("%x", hash.Sum(nil))
-			found := false
-			newVotes := []*vote{}
-			votes, err := h.db.getVotes(id)
+
+			err := h.db.deleteVote(myVote)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
-				log.Printf("Couldnt decode: %v", err)
+				log.Printf("Couldnt delete vote: %v", err)
 				return
-			}
-			for _, v := range votes {
-				if v.VideoID == myVote.VideoID && v.PersonID == myVote.PersonID {
-					found = true
-				} else {
-					newVotes = append(newVotes, v)
-				}
-				h.db.putVote(v)
-			}
-			if found {
-				log.Printf("Updated: %+v", myVote)
 			}
 		case http.MethodPost:
 			// replace with received blob
@@ -95,10 +109,20 @@ func (h *handler) voteHandler(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Couldnt decode: %v", err)
 				return
 			}
-			if err := h.db.putVote(myVote); err != nil {
-				respond(w, http.StatusInternalServerError)
-				log.Printf("Could not put vote: %s", err)
-				return
+			myVote.VideoListID = id
+			myVote.PersonID = personID
+			if myVote.ID != 0 {
+				if err := h.db.updateVote(myVote); err != nil {
+					respond(w, http.StatusInternalServerError)
+					log.Printf("Could not put vote: %s", err)
+					return
+				}
+			} else {
+				if err := h.db.createVote(myVote); err != nil {
+					respond(w, http.StatusInternalServerError)
+					log.Printf("Could not put vote: %s", err)
+					return
+				}
 			}
 		}
 	}
@@ -137,7 +161,7 @@ func (h *handler) videoListsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	default:
-		_, err := parseAuth(r)
+		user, err := parseAuth(r)
 		if err != nil {
 			log.Printf("Auth failure: %v", err)
 			respond(w, http.StatusUnauthorized)
@@ -153,6 +177,7 @@ func (h *handler) videoListsHandler(w http.ResponseWriter, r *http.Request) {
 				respond(w, http.StatusBadRequest)
 				return
 			}
+			myVideoList.CreatorID = user
 			err = h.db.createVideoList(myVideoList)
 			if err != nil {
 				log.Printf("Couldnt create: %v", err)
@@ -161,13 +186,22 @@ func (h *handler) videoListsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			id = myVideoList.ID
 			log.Printf("Created: %+v", myVideoList)
+			for _, v := range myVideoList.Videos {
+				v.VideoListID = id
+				v.CreatorID = user
+				err := h.db.addVideoToList(v)
+				if err != nil {
+					respond(w, http.StatusInternalServerError)
+					log.Printf("Could not add video: %s", err)
+					return
+				}
+			}
 		}
 	}
-	myVideoList, err := h.db.getVideoList(id)
+	myVideoList, err := h.getVideoList(id)
 	if err != nil {
-		// could not connect
 		respond(w, http.StatusInternalServerError)
-		log.Printf("Could not fetch metadata: %s", err)
+		log.Printf("Could not add video: %s", err)
 		return
 	}
 	b, _ := json.Marshal(myVideoList)
@@ -343,7 +377,7 @@ func (h *handler) templateHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("No Video List ID received: %s", err)
 			return
 		}
-		myVideoList, err := h.db.getVideoList(id)
+		myVideoList, err := h.getVideoList(id)
 		if err != nil {
 			respond(w, http.StatusNotFound)
 			log.Printf("Could not fetch metadata: %s", err)

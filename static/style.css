@@ -237,6 +237,13 @@ ul.list li div {
   justify-content: space-between;
 }
 
+div.video-list-title {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
 div.new-item-form {
   display: flex;
   justify-content: space-between;
